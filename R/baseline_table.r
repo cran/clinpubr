@@ -1,3 +1,76 @@
+#' Test normality of a numeric variable
+#' @description Perform multiple normality tests on a numeric variable and determine if it follows normal distribution.
+#' @param x A numeric vector to test for normality.
+#' @param alpha The significance level for normality tests. Default is 0.05.
+#' @param all_positive A logical value indicating whether all values are non-negative. If TRUE and
+#'   standard deviation is less than mean, the variable is considered non-normal (likely right-skewed).
+#' @returns A logical value indicating whether the variable is normal (TRUE) or non-normal (FALSE).
+#' @note This function performs Shapiro-Wilk, Lilliefors, Anderson-Darling, Jarque-Bera, and 
+#'   Shapiro-Francia tests. If at least two of these tests indicate that the variable is nonnormal 
+#'   (p < alpha), then it is considered nonnormal. For positive variables, if SD < mean, it's also 
+#'   considered non-normal as it suggests right skewness.
+#' @export
+#' @examples
+#' # Test normal data
+#' normal_data <- rnorm(100)
+#' test_normality(normal_data)
+#' 
+#' # Test non-normal data
+#' skewed_data <- rexp(100)
+#' test_normality(skewed_data)
+test_normality <- function(x, alpha = 0.05, all_positive = NULL) {
+  # Remove NA values and scale the data
+  x_clean <- na.omit(x)
+  if (length(x_clean) < 3) {
+    warning("Insufficient data points for normality testing")
+    return(FALSE)
+  }
+  
+  x_scaled <- c(scale(x_clean))
+  
+  # Check if all values are positive
+  if (is.null(all_positive)) {
+    all_positive <- all(x_clean >= 0, na.rm = TRUE)
+  }
+  
+  # Define normality tests
+  normal_tests <- list(
+    `Shapiro-Wilk` = shapiroTest,
+    `Lilliefors` = lillieTest,
+    `Anderson-Darling` = adTest,
+    `Jarque-Bera` = jarqueberaTest,
+    `Shapiro-Francia` = sfTest
+  )
+  
+  # Perform normality tests
+  ps <- c()
+  for (j in seq_along(normal_tests)) {
+    ps[j] <- tryCatch(
+      {
+        tmp <- normal_tests[[j]](x_scaled)@test
+        # Special handling for Anderson-Darling test
+        if (names(normal_tests)[j] == "Anderson-Darling" & tmp$p.value[1] == 1 & tmp$statistic > 200) {
+          0
+        } else {
+          tmp$p.value[1]
+        }
+      },
+      error = function(e) {
+        NA
+      }
+    )
+  }
+  
+  # Determine if variable is normal
+  # Consider non-normal if:
+  # 1. For positive variables: SD < mean (indicating right skewness)
+  # 2. At least two normality tests reject null hypothesis (p < alpha)
+  is_nonnormal <- (all_positive && (sd(x_scaled, na.rm = TRUE) < mean(x_scaled, na.rm = TRUE))) ||
+                  (sum(ps < alpha, na.rm = TRUE) >= sum(!is.na(ps)) - 2)
+  
+  return(!is_nonnormal)
+}
+
 #' Get variable types for baseline table
 #' @description Automatic variable type and method determination for baseline table.
 #' @param data A data frame.
@@ -42,13 +115,6 @@ get_var_types <- function(data, strata = NULL, norm_test_by_group = TRUE, omit_f
   }
 
   dat_list <- list()
-  normal_tests <- list(
-    `Shapiro-Wilk` = shapiroTest,
-    `Lilliefors` = lillieTest,
-    `Anderson-Darling` = adTest,
-    `Jarque-Bera` = jarqueberaTest,
-    `Shapiro-Francia` = sfTest
-  )
   if (is.null(strata) || !norm_test_by_group) {
     dat_list[[1]] <- data
   } else {
@@ -97,40 +163,28 @@ get_var_types <- function(data, strata = NULL, norm_test_by_group = TRUE, omit_f
         }
       }
     } else {
-      all.pos <- all(data[[var]] >= 0, na.rm = TRUE)
       for (i in seq_along(dat_list)) {
         dat <- dat_list[[i]]
-        x <- c(scale(dat[[var]]))
-        ps <- c()
-        for (j in seq_along(normal_tests)) {
-          ps[j] <- tryCatch(
-            {
-              tmp <- normal_tests[[j]](x)@test
-              if (names(normal_tests)[j] == "Anderson-Darling" & tmp$p.value[1] == 1 & tmp$statistic > 200) {
-                0
-              } else {
-                tmp$p.value[1]
-              }
-            },
-            error = function(e) {
-              NA
-            }
-          )
-        }
-        if ((all.pos && (sd(x, na.rm = TRUE) < mean(x, na.rm = TRUE))) ||
-          (sum(ps < alphas[i], na.rm = TRUE) >= sum(!is.na(ps)) - 2)) {
+        x <- dat[[var]]
+        
+        # Use the new test_normality function
+        is_normal <- test_normality(x, alpha = alphas[i])
+        
+        if (!is_normal) {
           nonnormal_vars <- union(nonnormal_vars, var)
           prefix <- "nonnormal"
         } else {
           prefix <- "normal"
         }
+        
         if (save_qqplots) {
+          x_scaled <- c(scale(x))
           title <- var
           if (!is.null(strata)) {
             title <- paste(title, "by", strata, groups[i], sep = "_")
           }
           qq_name <- paste0(paste(prefix, title, sep = "_"), ".png")
-          qq_show(x, title = title, save = TRUE, filename = paste0(folder_name, "/", qq_name))
+          qq_show(x_scaled, title = title, save = TRUE, filename = paste0(folder_name, "/", qq_name))
         }
       }
     }
@@ -153,7 +207,7 @@ get_var_types <- function(data, strata = NULL, norm_test_by_group = TRUE, omit_f
 #' @param factor_vars A vector of factor variables. Overwrites the factor variables in `var_types`.
 #' @param exact_vars A vector of variables to test for exactness. Overwrites the exact variables in `var_types`.
 #' @param nonnormal_vars A vector of variables to test for normality. Overwrites the nonnormal variables in `var_types`.
-#' @param smd A logical value indicating whether to include SMD in the table. Passed to `tableone::print.TableOne`.
+#' @param smd A logical value indicating whether to include SMD in the table. Passed to `tableone::print.TableOne()`.
 #' @param seed A seed for the random number generator. This seed can be set for consistent simulation when
 #'   performing fisher exact tests.
 #' @param omit_missing_strata A logical value indicating whether to omit missing values in the strata variable.
@@ -162,10 +216,10 @@ get_var_types <- function(data, strata = NULL, norm_test_by_group = TRUE, omit_f
 #'   be the same as the main table, but with "_missing" and "_pairwise" appended.
 #' @param multiple_comparison_test A logical value indicating whether to perform multiple comparison tests. Variables in
 #'   `factor_vars` and `exact_vars` are tested with pairwise `chisq.test` or `fisher.test`, and other variables are
-#'   tested with `rstatix::dunn_test` or `rstatix::games_howell_test`.
+#'   tested with `rstatix::dunn_test()` or `rstatix::games_howell_test()`.
 #' @param p_adjust_method The method to use for p-value adjustment for pairwise comparison. Default is "BH".
 #'   See `?p.adjust.methods`.
-#' @param ... Additional arguments passed to `tableone::print.TableOne`.
+#' @param ... Additional arguments passed to `tableone::print.TableOne()`.
 #' @returns A list containing the baseline table and accompanying tables.
 #' @export
 #' @examples
@@ -189,6 +243,12 @@ get_var_types <- function(data, strata = NULL, norm_test_by_group = TRUE, omit_f
 baseline_table <- function(data, var_types = NULL, strata = NULL, vars = NULL, factor_vars = NULL, exact_vars = NULL,
                            nonnormal_vars = NULL, seed = NULL, omit_missing_strata = FALSE, save_table = FALSE,
                            filename = NULL, multiple_comparison_test = TRUE, p_adjust_method = "BH", smd = FALSE, ...) {
+  # Check required packages
+  check_package("tableone", "baseline table creation")
+  if (multiple_comparison_test) {
+    check_package("rstatix", "multiple comparison tests")
+  }
+  
   if (!is.null(var_types) && !"var_types" %in% class(var_types)) {
     stop("Invalid 'var_types' arguement! Please use result from get_var_types function.")
   }

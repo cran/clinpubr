@@ -1,6 +1,6 @@
 Package: clinpubr
 Title: Clinical Publication
-Version: 1.0.1
+Version: 1.0.2
 Authors@R: 
     c(person("Yue", "Niu", email = "niuyuesam@163.com", role = c("aut", "cre", "cph"),
              comment = c(ORCID = "0000-0001-6843-3548")),
@@ -19,19 +19,19 @@ RoxygenNote: 7.3.2
 Collate: 'answer_check.r' 'baseline_table.r' 'calculate_index.r'
         'check_nonnum.r' 'classif_model_compare.r' 'combine_files.r'
         'cut_by.r' 'extract_num.r' 'get_valid.r' 'get_valid_subset.r'
-        'importance_plot.r' 'interactions.r' 'mark_outlier.r' 'utils.R'
-        'misc.r' 'rcs_plot.r' 'regressions.r' 'split_multichoice.r'
-        'subgroup_forest.r' 'subject_standardize.r' 'to_date.r'
-        'unit_standardize.r' 'value_initial_cleaning.r'
-Imports: broom, car, caret, dcurves, DescTools, dplyr, fBasics,
-        forestploter, ggplot2, pROC, ResourceSelection, rlang, rms,
-        rstatix, stringi, stringr, survival, survminer, tableone, tidyr
-Suggests: dtplyr, testthat (>= 3.0.0), vdiffr, withr
+        'importance_plot.r' 'initial_cleaning.r' 'interactions.r'
+        'mark_outlier.r' 'utils.R' 'misc.r' 'multichoice.r'
+        'rcs_plot.r' 'regressions.r' 'subgroup_forest.r'
+        'subject_standardize.r' 'to_date.r' 'unit_standardize.r'
+Imports: broom, car, DescTools, dplyr, fBasics, forestploter, ggplot2,
+        rlang, rms, stringi, stringr, survival, survminer, tidyr
+Suggests: caret, dcurves, dtplyr, pROC, ResourceSelection, rstatix,
+        tableone, testthat (>= 3.0.0), vdiffr, withr
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2025-06-18 15:55:43 UTC; niuyu
+Packaged: 2025-08-19 09:50:46 UTC; niuyu
 Author: Yue Niu [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0001-6843-3548>),
   Keyun Wang [aut]
 Repository: CRAN
-Date/Publication: 2025-06-23 10:20:14 UTC
+Date/Publication: 2025-08-19 10:20:02 UTC

@@ -31,6 +31,30 @@ vec2code <- function(x) {
   }
 }
 
+#' Get common prefix of a string vector
+#'
+#' @param x A string vector.
+#'
+#' @returns A string that is the common prefix of the input vector.
+#' @export
+#' @examples
+#' common_prefix(c("Q1_a", "Q1_b", "Q1_c"))
+common_prefix <- function(x) {
+  if (length(x) == 1) {
+    return(x)
+  }
+  min_len <- min(nchar(x))
+  prefix <- character(0)
+  for (i in 1:min_len) {
+    chars <- substr(x, i, i)
+    if (length(unique(chars)) == 1) {
+      prefix <- c(prefix, chars[1])
+    } else {
+      break
+    }
+  }
+  paste(prefix, collapse = "")
+}
 
 #' Format p-value for publication
 #' @description Format p-value with modified default settings suitable for publication.
@@ -152,6 +176,26 @@ add_lists <- function(l1, l2) {
   return(result)
 }
 
+#' Determine duplicate elements including their first occurrence.
+#' @description If an element is duplicated, all of its occurrence will be labeled `TRUE`.
+#'   Useful to list and compare all duplicates.
+#' @param x A vector.
+#'
+#' @returns A logical vector.
+#' @export
+#' @examples
+#' indicate_duplicates(c(1, 2, NA, NA, 1))
+#' indicate_duplicates(c(1, 2, 3, 4, 4))
+#' 
+#' # Useful to check duplicates in data frames.
+#' df <- data.frame(
+#'   id = c(1, 2, 1, 2, 3), year = c(2010, 2011, 2010, 2010, 2011),
+#'   value = c(1, 2, 3, 4, 5)
+#' )
+#' df[indicate_duplicates(df[, c("id", "year")]), ]
+indicate_duplicates <- function(x) {
+  c(duplicated(x) | duplicated(x, fromLast = TRUE))
+}
 
 #' Replacing elements in a vector
 #' @param x A vector.
