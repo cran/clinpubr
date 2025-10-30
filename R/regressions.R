@@ -6,8 +6,12 @@
 #' @param y A character string of the outcome variable.
 #' @param time A character string of the time variable. If `NULL`, logistic regression is used.
 #'   Otherwise, Cox proportional hazards regression is used.
+#' @param time2 A character string of the ending time of the interval for interval censored or counting process
+#'   data only.
 #' @param model_covs A character vector or a named list of covariates for different models.
 #'   If `NULL`, only the crude model is used.
+#' @param cluster A character string of the cluster variable. If set, correct for heteroscedasticity and for
+#'   correlated responses from cluster samples using `rms::robcov()`.
 #' @param pers A numeric vector of the denominators of variable `x`. Set this denominator to obtain a reasonable
 #'   OR or HR.
 #' @param factor_breaks A numeric vector of the breaks to factorize the `x` variable.
@@ -26,7 +30,7 @@
 #' @param pval_eps The threshold for rounding p values to 0.
 #' @param median_nsmall The minimum number of digits to the right of the decimal point for the median survival time.
 #' @param colors A vector of colors for the KM curves.
-#' @param xlab A character string of the x-axis label.
+#' @param xlab A character string of the x-axis label of the survival plot.
 #' @param legend_title A character string of the title of the legend.
 #' @param legend_pos A numeric vector of the position of the legend.
 #' @param pval_pos A numeric vector of the position of the p-value.
@@ -60,13 +64,15 @@
 #'   model_covs = list(Crude = c(), Model1 = c("ph.karno"), Model2 = c("ph.karno", "sex")),
 #'   save_output = FALSE
 #' )
-regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL, pers = c(0.1, 10, 100),
-                                     factor_breaks = NULL, factor_labels = NULL, quantile_breaks = NULL,
-                                     quantile_labels = NULL, label_with_range = FALSE, save_output = FALSE,
-                                     figure_type = "png", ref_levels = "lowest", est_nsmall = 2,
-                                     p_nsmall = 3, pval_eps = 1e-3, median_nsmall = 0, colors = NULL, xlab = NULL,
-                                     legend_title = x, legend_pos = c(0.8, 0.8), pval_pos = NULL, n_y_pos = 0.9,
-                                     height = 6, width = 6, ...) {
+regression_basic_results <- function(
+  data, x, y, time = NULL, time2 = NULL, model_covs = NULL, cluster = NULL,
+  pers = c(0.1, 10, 100), factor_breaks = NULL, factor_labels = NULL, quantile_breaks = NULL,
+  quantile_labels = NULL, label_with_range = FALSE, save_output = FALSE,
+  figure_type = "png", ref_levels = "lowest", est_nsmall = 2,
+  p_nsmall = 3, pval_eps = 1e-3, median_nsmall = 0, colors = NULL, xlab = NULL,
+  legend_title = x, legend_pos = c(0.8, 0.8), pval_pos = NULL, n_y_pos = 0.9,
+  height = 6, width = 6, ...
+) {
   if (is.null(colors)) {
     colors <- emp_colors
   }
@@ -75,14 +81,17 @@ regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL,
     analysis_type <- "cox"
     coef_type <- "HR"
     new_time_var <- "time"
+    new_time2_var <- if (!is.null(time2)) "time2" else NULL
   } else if (length(levels(as.factor(data[[y]]))) == 2) {
     analysis_type <- "logistic"
     coef_type <- "OR"
     new_time_var <- NULL
+    new_time2_var <- NULL
   } else {
     analysis_type <- "linear"
     coef_type <- "Coefficient"
     new_time_var <- NULL
+    new_time2_var <- NULL
   }
 
   label_type <- ifelse(label_with_range, "combined", "LMH")
@@ -98,14 +107,14 @@ regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL,
   ref_levels <- str_replace_all(ref_levels, c("\\[" = "\\\\[", "\\(" = "\\\\(", "\\]" = "\\\\]", "\\)" = "\\\\)"))
 
   covars <- unique(unlist(model_covs))
-  if (any(c(y, time, x) %in% covars)) {
+  if (any(c(y, time, time2, x, cluster) %in% covars)) {
     stop("conflict of model variables!")
   }
 
-  dat <- dplyr::select(data, all_of(c(y, x, time, covars)))
+  dat <- dplyr::select(data, all_of(c(y, x, time, time2, covars, cluster)))
   if (length(model_covs) > 1) {
     model_complete_cases <- sapply(model_covs, function(tmp_covs) {
-      complete.cases(dat[, tmp_covs])
+      complete.cases(dat[, c(tmp_covs)])
     })
     if (any(!rowSums(model_complete_cases) %in% c(0, length(model_covs)))) {
       warn(paste0(
@@ -117,12 +126,16 @@ regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL,
   }
   dat <- na.omit(dat)
   colnames(dat)[c(1:2)] <- c("y", "x")
+  start_col <- 3
   if (analysis_type == "cox") {
-    start_col <- 4
+    start_col <- start_col + 1
     colnames(dat)[3] <- new_time_var
-  } else {
-    start_col <- 3
+    if (!is.null(new_time2_var)) {
+      start_col <- start_col + 1
+      colnames(dat)[4] <- new_time2_var
+    }
   }
+
   ori_covs <- covars
   if (!is.null(covars)) {
     covars <- paste0(".cov", seq_along(covars))
@@ -181,13 +194,21 @@ regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL,
   plots_list <- list()
   for (var in vars) {
     if (is.factor(dat[[var]])) {
-      formula <- create_formula("y", var, time = new_time_var)
+      formula <- create_formula("y", var, time = new_time_var, time2 = new_time2_var)
       if (analysis_type == "cox") {
         fit <- survminer::surv_fit(formula = formula, data = dat)
-        log_rank_p <- survdiff(formula = formula, data = dat)$pvalue
-        log_rank_p <- format_pval(log_rank_p,
-          text_ahead = "Log-rank\np",
-          nsmall = p_nsmall, eps = pval_eps
+        log_rank_p <- tryCatch(
+          {
+            log_rank_p <- survdiff(formula = formula, data = dat)$pvalue
+            format_pval(log_rank_p,
+              text_ahead = "Log-rank\np",
+              nsmall = p_nsmall, eps = pval_eps
+            )
+          },
+          error = function(e) {
+            warning("Log-rank test failed with error: ", e$message)
+            FALSE
+          }
         )
         p <- survminer::ggsurvplot(fit,
           pval = log_rank_p,
@@ -217,7 +238,8 @@ regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL,
                   x = unit(0.5, "npc"),
                   y = unit(n_y_pos, "npc"),
                   gp = grid::gpar(fontsize = 15, fontface = "bold")
-                )
+                ),
+                ymin = I(0)
               )
           }
           p$plot <- p$plot +
@@ -301,8 +323,8 @@ regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL,
     tmp_covs <- covars[match(model_covs[[j]], ori_covs)]
     for (var in vars) {
       model_res <- regression_fit(
-        data = dat, y = "y", predictor = var, time = new_time_var,
-        covars = tmp_covs, returned = "full"
+        data = dat, y = "y", predictor = var, time = new_time_var, time2 = new_time2_var,
+        covars = tmp_covs, cluster = cluster, returned = "full"
       )
       model_res <- data.frame(model_res[grepl("x", model_res$term), ])
       for (col in c("estimate", "conf.low", "conf.high")) {
@@ -325,8 +347,8 @@ regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL,
         if (nrow(tmp) > 1) {
           dat$tmp <- as.numeric(dat0[[var]])
           model_res <- regression_fit(
-            data = dat, y = "y", predictor = "tmp", time = new_time_var,
-            covars = tmp_covs, returned = "predictor_combined"
+            data = dat, y = "y", predictor = "tmp", time = new_time_var, time2 = new_time2_var,
+            covars = tmp_covs, cluster = cluster, returned = "predictor_combined"
           )
           res_table[i, col2] <- format_pval(model_res$p.value, nsmall = p_nsmall, eps = pval_eps)
           i <- i + 1
@@ -350,6 +372,10 @@ regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL,
 #' @param y A character string of the outcome variable.
 #' @param time A character string of the time variable. If `NULL`, logistic regression is used.
 #'   Otherwise, Cox proportional hazards regression is used.
+#' @param time2 A character string of the ending time of the interval for interval censored or counting process
+#'   data only.
+#' @param cluster A character string of the cluster variable. If set, correct for heteroscedasticity and for
+#'   correlated responses from cluster samples using `rms::robcov()`.
 #' @param as_univariate A logical value indicating whether to treat the model_vars as univariate.
 #' @param est_nsmall An integer specifying the precision for the estimates in the plot.
 #' @param p_nsmall An integer specifying the number of decimal places for the p-values.
@@ -382,20 +408,24 @@ regression_basic_results <- function(data, x, y, time = NULL, model_covs = NULL,
 #'   y = "status", time = "time",
 #'   show_vars = c("age", "sex", "ph.ecog_cat", "meal.cal"), save_plot = FALSE
 #' )
-regression_forest <- function(data, model_vars, y, time = NULL, as_univariate = FALSE, est_nsmall = 2,
+regression_forest <- function(data, model_vars, y, time = NULL, time2 = NULL, cluster = NULL,
+                              as_univariate = FALSE, est_nsmall = 2,
                               p_nsmall = 3, show_vars = NULL, save_plot = FALSE, filename = NULL, ...) {
   if (!is.null(time)) {
     analysis_type <- "cox"
     effect_label <- "HR (95% CI)"
     new_time_var <- "time"
+    new_time2_var <- if (!is.null(time2)) "time2" else NULL
   } else if (length(levels(as.factor(data[[y]]))) == 2) {
     analysis_type <- "logistic"
     effect_label <- "OR (95% CI)"
     new_time_var <- NULL
+    new_time2_var <- NULL
   } else {
     analysis_type <- "linear"
     effect_label <- "Coefficient (95% CI)"
     new_time_var <- NULL
+    new_time2_var <- NULL
   }
   ref_val <- ifelse(analysis_type %in% c("cox", "logistic"), 1, 0)
   x_trans <- ifelse(analysis_type %in% c("cox", "logistic"), "log10", "none")
@@ -417,14 +447,14 @@ regression_forest <- function(data, model_vars, y, time = NULL, as_univariate = 
 
   vars <- unique(unlist(model_vars))
   if (is.null(show_vars)) show_vars <- vars
-  data <- na.omit(dplyr::select(data, all_of(c(y, time, vars))))
+  data <- na.omit(dplyr::select(data, all_of(c(y, time, time2, vars, cluster))))
 
   new_vars <- paste0(
     "v",
     str_pad(seq_along(vars), ceiling(log10(length(vars) + 1)), "left", "0"),
     "_"
   )
-  colnames(data) <- c("y", new_time_var, new_vars)
+  colnames(data) <- c("y", new_time_var, new_time2_var, new_vars, cluster)
   show_var_ids <- as.vector(na.omit(match(show_vars, vars)))
   res_list <- list()
   for (model_name in names(model_vars)) {
@@ -435,7 +465,9 @@ regression_forest <- function(data, model_vars, y, time = NULL, as_univariate = 
       y = "y",
       predictor = new_vars[tmp_var_ids[1]],
       time = new_time_var,
+      time2 = new_time2_var,
       covars = new_vars[tmp_var_ids[-1]],
+      cluster = cluster,
       returned = "full"
     )
 
@@ -540,9 +572,13 @@ regression_forest <- function(data, model_vars, y, time = NULL, as_univariate = 
 #' @param y A character string of the outcome variable.
 #' @param time A character string of the time variable. If `NULL`, logistic regression is used.
 #'   Otherwise, Cox proportional hazards regression is used.
+#' @param time2 A character string of the ending time of the interval for interval censored or counting process
+#'   data only.
 #' @param predictors The predictor variables to be scanned for relationships. If `NULL`, all variables
 #'   except `y` and `time` are taken as predictors.
 #' @param covars A character vector of covariate names.
+#' @param cluster A character string of the cluster variable. If set, correct for heteroscedasticity and for
+#'   correlated responses from cluster samples using `rms::robcov()`.
 #' @param num_to_factor An integer. Numerical variables with number of unique values below or equal
 #'   to this value would be considered a factor.
 #' @param p_adjust_method The method to use for p-value adjustment for pairwise comparison. Default is "BH".
@@ -574,8 +610,8 @@ regression_forest <- function(data, model_vars, y, time = NULL, as_univariate = 
 #' @examples
 #' data(cancer, package = "survival")
 #' regression_scan(cancer, y = "status", time = "time", save_table = FALSE)
-regression_scan <- function(data, y, time = NULL, predictors = NULL, covars = NULL, num_to_factor = 5,
-                            p_adjust_method = "BH", save_table = FALSE, filename = NULL) {
+regression_scan <- function(data, y, time = NULL, time2 = NULL, predictors = NULL, covars = NULL, cluster = NULL,
+                            num_to_factor = 5, p_adjust_method = "BH", save_table = FALSE, filename = NULL) {
   supported_var_trans <- list(
     numerical = c("original", "logarithm", "categorized", "rcs"),
     num_factor = c("original", "categorized"),
@@ -593,7 +629,7 @@ regression_scan <- function(data, y, time = NULL, predictors = NULL, covars = NU
     coef_type <- "Coefficient"
   }
   if (is.null(predictors)) {
-    predictors <- setdiff(colnames(data), c(y, time))
+    predictors <- setdiff(colnames(data), c(y, time, time2, cluster))
     message("Taking all variables as predictors")
   }
   if (any(!predictors %in% colnames(data))) {
@@ -618,8 +654,8 @@ regression_scan <- function(data, y, time = NULL, predictors = NULL, covars = NU
   res_df$predictor <- predictors
   for (i in seq_along(predictors)) {
     predictor <- predictors[i]
-    covars <- remove_conflict(covars, c(y, predictor, time), silent = TRUE)
-    dat <- dplyr::select(data, all_of(c(y, predictor, time, covars)))
+    covars <- remove_conflict(covars, c(y, predictor, time, time2, cluster), silent = TRUE)
+    dat <- dplyr::select(data, all_of(c(y, predictor, time, time2, covars, cluster)))
     dat <- na.omit(dat)
     nvalid <- nrow(dat)
     res_df$nvalid[i] <- nvalid
@@ -652,19 +688,20 @@ regression_scan <- function(data, y, time = NULL, predictors = NULL, covars = NU
       }
       tryCatch(
         {
-          model_res <- regression_fit(
-            data = tmp_dat, y = y, predictor = predictor, time = time,
-            covars = covars, rcs_knots = rcs_knots, returned = "predictor_combined"
+          res <- regression_fit(
+            data = tmp_dat, y = y, predictor = predictor, time = time, time2 = time2,
+            covars = covars, cluster = cluster, rcs_knots = rcs_knots, returned = "predictor_combined"
           )
           if (var_trans == "rcs") {
-            res_df$rcs.overall.pval[i] <- model_res$p_overall
-            res_df$rcs.nonlinear.pval[i] <- model_res$p_nonlinear
+            res_df[i, paste(var_trans, c("overall.pval", "nonlinear.pval"), sep = ".")] <-
+              c(res$p_overall, res$p_nonlinear)
           } else {
-            res_df[[paste(var_trans, coef_type, sep = ".")]][i] <- model_res$estimate
-            res_df[[paste(var_trans, "pval", sep = ".")]][i] <- model_res$p.value
+            res_df[i, paste(var_trans, coef_type, sep = ".")] <- res$estimate
+            res_df[i, paste(var_trans, "pval", sep = ".")] <- res$p.value
           }
         },
         error = function(e) {
+          warning(paste0("Error in ", predictor, " with ", var_trans, " transform: ", e$message))
         }
       )
     }
@@ -702,7 +739,11 @@ regression_scan <- function(data, y, time = NULL, predictors = NULL, covars = NU
 #' @param predictor A character string of the predictor variable.
 #' @param time A character string of the time variable. If `NULL`, linear or logistic regression is used.
 #'   Otherwise, Cox proportional hazards regression is used.
+#' @param time2 A character string of the ending time of the interval for interval censored or counting process
+#'   data only.
 #' @param covars A character vector of covariate names.
+#' @param cluster A character string of the cluster variable. If set, correct for heteroscedasticity and for
+#'   correlated responses from cluster samples using `rms::robcov()`.
 #' @param rcs_knots The number of rcs knots. If `NULL`, a linear model would be fitted instead.
 #' @param returned The return mode of this function.
 #'   - `"full"`: return the full regression result.
@@ -716,10 +757,23 @@ regression_scan <- function(data, y, time = NULL, predictors = NULL, covars = NU
 #' @examples
 #' data(cancer, package = "survival")
 #' regression_fit(data = cancer, y = "status", predictor = "age", time = "time", rcs_knots = 4)
-regression_fit <- function(data, y, predictor, time = NULL, covars = NULL, rcs_knots = NULL,
-                           returned = c("full", "predictor_split", "predictor_combined")) {
+regression_fit <- function(data, y, predictor, time = NULL, time2 = NULL, covars = NULL, cluster = NULL,
+                           rcs_knots = NULL, returned = c("full", "predictor_split", "predictor_combined")) {
   returned <- match.arg(returned)
   if (!is.null(rcs_knots) && rcs_knots == 0) rcs_knots <- NULL
+
+  if (!is.null(rcs_knots)) {
+    if (!is.numeric(data[[predictor]])) {
+      stop("`rcs_knots` should be NULL when the predictor is not a numeric variable.")
+    }
+  }
+
+  if (!is.null(cluster)) {
+    data <- data %>%
+      dplyr::select(all_of(c(y, predictor, time, time2, covars, cluster))) %>%
+      na.omit()
+  }
+
   analysis_type <- if (!is.null(time)) {
     "cox"
   } else if (length(levels(as.factor(data[[y]]))) == 2) {
@@ -727,7 +781,7 @@ regression_fit <- function(data, y, predictor, time = NULL, covars = NULL, rcs_k
   } else {
     "linear"
   }
-  covars <- remove_conflict(covars, c(y, predictor, time))
+  covars <- remove_conflict(covars, c(y, predictor, time, time2, cluster))
 
   predictor_type <- if (is.factor(data[[predictor]]) && length(levels(data[[predictor]])) > 2) {
     "multi_factor"
@@ -735,9 +789,12 @@ regression_fit <- function(data, y, predictor, time = NULL, covars = NULL, rcs_k
     "num_or_binary"
   }
 
-  formula <- create_formula(y, predictor, time = time, covars = covars, rcs_knots = rcs_knots)
+  fit_rms <- !is.null(cluster) || (!is.null(rcs_knots) && returned == "predictor_combined")
 
-  model <- fit_model(formula, data = data, analysis_type = analysis_type)
+  formula <- create_formula(y, predictor, time = time, time2 = time2, covars = covars, rcs_knots = rcs_knots)
+
+  # need to check `rms` argument
+  model <- fit_model(formula, data = data, analysis_type = analysis_type, cluster = cluster, rms = fit_rms)
   full_res <- broom::tidy(model, conf.int = TRUE, exponentiate = analysis_type %in% c("logistic", "cox"))
   if (analysis_type %in% c("linear", "logistic")) full_res <- full_res[-1, ]
 
@@ -746,7 +803,7 @@ regression_fit <- function(data, y, predictor, time = NULL, covars = NULL, rcs_k
   } else if (predictor_type == "num_or_binary" && is.null(rcs_knots)) {
     return(as.data.frame(full_res[1, ]))
   } else if (returned == "predictor_split") {
-    if (is.numeric(data[[predictor]])) {
+    if (predictor_type == "num_or_binary") {
       res <- as.data.frame(full_res[seq_len(rcs_knots - 1), ])
     } else {
       res <- as.data.frame(full_res[seq_len(length(levels(data[[predictor]])) - 1), ])
@@ -754,8 +811,7 @@ regression_fit <- function(data, y, predictor, time = NULL, covars = NULL, rcs_k
     if (any(!grepl(predictor, res$term))) stop("predictor not found in the regression result")
     return(res)
   } else {
-    if (is.numeric(data[[predictor]]) && !is.null(rcs_knots)) {
-      model <- fit_model(formula, data = data, analysis_type = analysis_type, rms = TRUE)
+    if (predictor_type == "num_or_binary" && !is.null(rcs_knots)) {
       ps <- unname(anova(model)[, "P"])
       return(list(estimate = NA, p_overall = ps[1], p_nonlinear = ps[2]))
     } else {
@@ -768,24 +824,50 @@ regression_fit <- function(data, y, predictor, time = NULL, covars = NULL, rcs_k
 }
 
 fit_model <- function(formula, data, analysis_type = c("linear", "logistic", "cox"),
-                      rms = FALSE, ...) {
+                      rms = FALSE, cluster = NULL, ...) {
   analysis_type <- match.arg(analysis_type)
+  if (!is.null(cluster) && (analysis_type != "cox") && rms == FALSE) {
+    check_package("geepack", "GEE models are implemented in geepack package.")
+  }
+
+  if (!is.null(cluster)) {
+    if (any(is.na(data[[cluster]]))) {
+      # warning("There are missing values in the cluster variable. Corresponding rows will be removed.")
+      data <- data[!is.na(data[[cluster]]), ]
+    }
+  }
+
   model <- suppressWarnings(
     if (rms) {
       if (analysis_type == "cox") {
-        rms::cph(formula, data = data, ...)
+        tmp <- rms::cph(formula, data = data, x = TRUE, y = TRUE, ...)
       } else if (analysis_type == "logistic") {
-        rms::Glm(formula, data = data, family = stats::binomial(), ...)
+        tmp <- rms::Glm(formula, data = data, family = stats::binomial(), x = TRUE, y = TRUE, ...)
       } else if (analysis_type == "linear") {
-        rms::ols(formula, data = data, ...)
+        tmp <- rms::ols(formula, data = data, x = TRUE, y = TRUE, ...)
+      }
+      if (!is.null(cluster)) {
+        rms::robcov(tmp, cluster = data[[cluster]])
+      } else {
+        tmp
       }
     } else {
-      if (analysis_type == "cox") {
-        survival::coxph(formula, data = data, ...)
-      } else if (analysis_type == "logistic") {
-        stats::glm(formula, data = data, family = stats::binomial(), ...)
-      } else if (analysis_type == "linear") {
-        stats::lm(formula, data = data, ...)
+      if (!is.null(cluster)) {
+        if (analysis_type == "cox") {
+          survival::coxph(formula, data = data, cluster = data[[cluster]], ...)
+        } else if (analysis_type == "logistic") {
+          geepack::geeglm(formula, data = data, family = stats::binomial(), id = data[[cluster]], ...)
+        } else if (analysis_type == "linear") {
+          geepack::geeglm(formula, data = data, id = data[[cluster]], ...)
+        }
+      } else {
+        if (analysis_type == "cox") {
+          survival::coxph(formula, data = data, ...)
+        } else if (analysis_type == "logistic") {
+          stats::glm(formula, data = data, family = stats::binomial(), ...)
+        } else if (analysis_type == "linear") {
+          stats::lm(formula, data = data, ...)
+        }
       }
     }
   )
