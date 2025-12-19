@@ -1,3 +1,21 @@
+# clinpubr 1.1.1
+
+* Fixed PR plot visual inconsistency in `classif_model_compare()`.
+
+* Added `remove_inequal` argument to `value_initial_cleaning()`.
+
+* Changed the output of `vec2code()` to a more robust format.
+
+* Added a wrapper of `vec2code()`, where `name2code(x)` is equivalent to `vec2code(names(x))`.
+
+* Added `time_roc_plot()` that plot time-dependent ROC curve using `timeROC::timeROC()`.
+
+* `baseline_table()` now uses invisible return if `save_table` is `TRUE`.
+
+* No longer showing the default row ids in auto-saved csv tables.
+
+* Minor bug fixes and improvements.
+
 # clinpubr 1.1.0
 
 * Added `time2` argument to functions that support cox models.
