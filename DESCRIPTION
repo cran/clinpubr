@@ -1,6 +1,6 @@
 Package: clinpubr
 Title: Clinical Publication
-Version: 1.1.1
+Version: 1.2.0
 Authors@R: 
     c(person("Yue", "Niu", email = "niuyuesam@163.com", role = c("aut", "cre", "cph"),
              comment = c(ORCID = "0000-0001-6843-3548")),
@@ -18,22 +18,22 @@ Encoding: UTF-8
 RoxygenNote: 7.3.3
 Collate: 'answer_check.R' 'baseline_table.R' 'calculate_index.R'
         'check_nonnum.R' 'classif_model_compare.R' 'combine_files.R'
-        'cut_by.R' 'exclusion_count.R' 'extract_num.R' 'get_valid.R'
-        'get_valid_subset.R' 'importance_plot.R' 'initial_cleaning.R'
-        'interactions.R' 'mark_outlier.R' 'utils.R' 'misc.R'
-        'multichoice.R' 'predictor_effect_plot.R' 'rcs_plot.R'
-        'regressions.R' 'subgroup_forest.R' 'subject_standardize.R'
-        'time_roc.R' 'to_date.R' 'unit_standardize.R'
+        'cut_by.R' 'data_overview.R' 'exclusion_count.R'
+        'extract_num.R' 'get_valid.R' 'get_valid_subset.R'
+        'importance_plot.R' 'initial_cleaning.R' 'interactions.R'
+        'mark_outlier.R' 'merge.R' 'utils.R' 'misc.R' 'multichoice.R'
+        'predictor_effect_plot.R' 'rcs_plot.R' 'regressions.R'
+        'subgroup_forest.R' 'subject_standardize.R' 'time_roc.R'
+        'to_date.R' 'unit_standardize.R'
 Imports: broom, car, DescTools, dplyr, fBasics, forestploter, ggplot2,
-        rlang, rms, stringi, stringr, survival, survminer, tidyr
-Suggests: caret, dcurves, dtplyr, geepack, Hmisc, pROC,
-        ResourceSelection, rstatix, tableone, testthat (>= 3.0.0),
-        timeROC, vdiffr, withr
+        Hmisc, rlang, rms, stringi, stringr, survival, survminer, tidyr
+Suggests: caret, dcurves, dtplyr, geepack, pROC, ResourceSelection,
+        rstatix, tableone, testthat (>= 3.0.0), timeROC, vdiffr, withr
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2025-12-19 13:14:18 UTC; niuyu
+Packaged: 2026-01-08 12:19:17 UTC; niuyu
 Author: Yue Niu [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0001-6843-3548>),
   Keyun Wang [aut]
 Repository: CRAN
-Date/Publication: 2025-12-19 13:40:08 UTC
+Date/Publication: 2026-01-08 15:50:12 UTC
