@@ -103,6 +103,44 @@ test_that("str_match_replace partially matches strings", {
   expect_equal(str_match_replace("aab", c("aa", "a"), c("A", "B")), "Ab") # Longest match first
 })
 
+# Test keep_by_keyword
+test_that("keep_by_keyword supports practical boundary modes", {
+  x <- c("id:AB-2026", "id:CD-2027")
+  keyword <- ":|-"
+
+  expect_equal(
+    keep_by_keyword(x, keyword, from = "start", to = "first"),
+    c("id:", "id:")
+  )
+
+  expect_equal(
+    keep_by_keyword(x, keyword, from = "start", to = "first", include_keyword = FALSE),
+    c("id", "id")
+  )
+
+  expect_equal(
+    keep_by_keyword(x, keyword, from = "last", to = "end"),
+    c("-2026", "-2027")
+  )
+
+  expect_equal(
+    keep_by_keyword(x, keyword, from = "last", to = "end", include_keyword = FALSE),
+    c("2026", "2027")
+  )
+
+  expect_equal(keep_by_keyword(c("abc", NA), keyword, from = "start", to = "last"), c("", NA))
+  expect_equal(keep_by_keyword(123, "2", from = "start", to = "first"), "12")
+})
+
+test_that("keep_by_keyword validates input", {
+  expect_error(keep_by_keyword("abc", ""), "`keyword` must be one non-empty regular expression string")
+  expect_error(keep_by_keyword("abc", NA_character_), "`keyword` must be one non-empty regular expression string")
+  expect_error(keep_by_keyword("abc", c("a", "b")), "`keyword` must be one non-empty regular expression string")
+  expect_error(keep_by_keyword("abc", "a", include_keyword = NA), "`include_keyword` must be one non-NA logical value")
+  expect_error(keep_by_keyword("abc", "a", include_keyword = c(TRUE, FALSE)), "`include_keyword` must be one non-NA logical value")
+  expect_error(keep_by_keyword("abc", "a", from = "last", to = "first"), "`from` must not be after `to`")
+})
+
 # Test unmake_names
 test_that("unmake_names reverses make.names", {
   ori <- c("xx (mg/dl)", "b*x", "Covid-19")
@@ -150,4 +188,71 @@ test_that("indicate_duplicates works with data frames and matrices", {
 
   mat <- matrix(c(1, 2, 1, 3, 2, 3), ncol = 2)
   expect_equal(indicate_duplicates(mat), c(TRUE, FALSE, TRUE))
+})
+
+test_that("to_wide converts long data to wide with aggregation", {
+  df <- data.frame(
+    id = c(1, 1, 1, 2, 2),
+    visit = c("v1", "v1", "v1", "v1", "v1"),
+    item = c("A", "A", "B", "A", "C"),
+    value = c(3, 5, 2, 1, 9)
+  )
+
+  res <- to_wide(
+    df,
+    keys = c("id", "visit"),
+    item_col = "item",
+    value_col = "value",
+    items = c("A", "B", "C"),
+    agg_fun = function(x) max(x, na.rm = TRUE)
+  )
+
+  expect_equal(names(res), c("id", "visit", "A", "B", "C"))
+  expect_equal(res$A[res$id == 1], 5)
+  expect_equal(res$B[res$id == 1], 2)
+  expect_true(is.na(res$C[res$id == 1]))
+  expect_equal(res$A[res$id == 2], 1)
+  expect_true(is.na(res$B[res$id == 2]))
+  expect_equal(res$C[res$id == 2], 9)
+})
+
+test_that("to_wide keeps item order and creates missing item columns", {
+  df <- data.frame(
+    id = c(1, 1, 2, 2, 2),
+    item = c("A", "C", "A", "D", "D"),
+    value = c(10, 30, 20, 40, 50)
+  )
+
+  res <- to_wide(
+    df,
+    keys = "id",
+    item_col = "item",
+    value_col = "value",
+    items = c("C", "B", "A")
+  )
+
+  expect_equal(names(res), c("id", "C", "B", "A"))
+  expect_true(all(is.na(res$B)))
+})
+
+test_that("to_wide validates input arguments", {
+  df <- data.frame(id = 1, item = "A", value = 1)
+
+  expect_error(
+    to_wide(df, keys = character(0), item_col = "item", value_col = "value"),
+    "`keys` must be a non-empty character vector.",
+    fixed = TRUE
+  )
+
+  expect_error(
+    to_wide(df, keys = "id", item_col = "item", value_col = "missing"),
+    "Missing columns in `df`: missing",
+    fixed = TRUE
+  )
+
+  expect_error(
+    to_wide(df, keys = "id", item_col = "item", value_col = "value", agg_fun = 1),
+    "`agg_fun` must be a function.",
+    fixed = TRUE
+  )
 })
