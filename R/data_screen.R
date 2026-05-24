@@ -80,7 +80,7 @@
 #'   data_list = list(patient = patient, admission = admission, diagnosis = diagnosis, lab = lab),
 #'   entry_expr = any(icd == "I10"),
 #'   entry_level = "patient_id",
-#'   anchor_expr = any(icd == "I10"),
+#'   anchor_expr = icd == "I10",
 #'   anchor_level = "date",
 #'   anchor_window = "from_first_anchor",
 #'   patient_id_map = "pid",
@@ -94,7 +94,7 @@
 #'   data_list = list(patient = patient, admission = admission, diagnosis = diagnosis, lab = lab),
 #'   entry_expr = any(icd == "I10"),
 #'   entry_level = "patient_id",
-#'   anchor_expr = any(Hb > 10),
+#'   anchor_expr = Hb > 10,
 #'   anchor_level = "date",
 #'   anchor_window = "from_first_anchor",
 #'   patient_id_map = "pid",
@@ -109,7 +109,7 @@ screen_data_list <- function(data_list,
                              entry_level = c("patient_id", "visit_id", "date"),
                              anchor_expr = NULL,
                              anchor_level = c("date", "visit_id"),
-                             anchor_window = c("none", "from_first_anchor"),
+                             anchor_window = c("from_first_anchor", "none"),
                              patient_id_map,
                              visit_id_map = NULL,
                              date_map = NULL,
@@ -210,8 +210,7 @@ screen_data_list <- function(data_list,
     table = character(),
     by = character(),
     before = integer(),
-    after = integer(),
-    stringsAsFactors = FALSE
+    after = integer()
   )
 
   if (output == "list") {
@@ -361,8 +360,7 @@ screen_data_list <- function(data_list,
   parts <- strsplit(tokens, "::", fixed = TRUE)
   data.frame(
     patient_id = vapply(parts, `[`, character(1), 1),
-    order_value = vapply(parts, `[`, character(1), 2),
-    stringsAsFactors = FALSE
+    order_value = vapply(parts, `[`, character(1), 2)
   )
 }
 
@@ -719,8 +717,7 @@ screen_data_list <- function(data_list,
     table = character(),
     before = integer(),
     after = integer(),
-    removed = integer(),
-    stringsAsFactors = FALSE
+    removed = integer()
   )
 
   if (length(selected_tokens) == 0) {
@@ -731,8 +728,7 @@ screen_data_list <- function(data_list,
         table = tbl,
         before = nrow(data_list[[tbl]]),
         after = 0,
-        removed = nrow(data_list[[tbl]]),
-        stringsAsFactors = FALSE
+        removed = nrow(data_list[[tbl]])
       ))
     }
     return(list(data = filtered, scope_log = scope_log))
@@ -763,8 +759,7 @@ screen_data_list <- function(data_list,
       table = tbl,
       before = before,
       after = after,
-      removed = before - after,
-      stringsAsFactors = FALSE
+      removed = before - after
     ))
     if (verbose) {
       message(sprintf("[entry_scope] %s: %d -> %d", tbl, before, after))
@@ -787,13 +782,12 @@ screen_data_list <- function(data_list,
     table = character(),
     before = integer(),
     after = integer(),
-    removed = integer(),
-    stringsAsFactors = FALSE
+    removed = integer()
   )
 
   if (is.null(anchor_expr) || anchor_window == "none") {
     return(list(data = data_list, scope_log = scope_log))
-  }
+  } 
 
   effective_level <- anchor_level
   if (anchor_level == "date" && is.null(date_map)) {
@@ -825,8 +819,7 @@ screen_data_list <- function(data_list,
         table = tbl,
         before = nrow(data_list[[tbl]]),
         after = 0,
-        removed = nrow(data_list[[tbl]]),
-        stringsAsFactors = FALSE
+        removed = nrow(data_list[[tbl]])
       ))
     }
     return(list(data = filtered, scope_log = scope_log))
@@ -870,8 +863,7 @@ screen_data_list <- function(data_list,
       table = tbl,
       before = before,
       after = after,
-      removed = before - after,
-      stringsAsFactors = FALSE
+      removed = before - after
     ))
     if (verbose) {
       message(sprintf("[anchor_scope] %s: %d -> %d", tbl, before, after))
@@ -892,8 +884,7 @@ screen_data_list <- function(data_list,
     table = character(),
     before = integer(),
     after = integer(),
-    removed = integer(),
-    stringsAsFactors = FALSE
+    removed = integer()
   )
 
   if (is.null(followup_min_visits)) {
@@ -935,7 +926,7 @@ screen_data_list <- function(data_list,
     keep <- as.character(data_list[[tbl]][[col_pid]]) %in% keep_patients
     data_list[[tbl]] <- data_list[[tbl]][which(keep), , drop = FALSE]
     after <- nrow(data_list[[tbl]])
-    log <- rbind(log, data.frame(step = "followup", table = tbl, before = before, after = after, removed = before - after, stringsAsFactors = FALSE))
+    log <- rbind(log, data.frame(step = "followup", table = tbl, before = before, after = after, removed = before - after))
     if (verbose) {
       message(sprintf("[followup] %s: %d -> %d", tbl, before, after))
     }
@@ -1046,8 +1037,7 @@ screen_data_list <- function(data_list,
     table = character(),
     by = character(),
     before = integer(),
-    after = integer(),
-    stringsAsFactors = FALSE
+    after = integer()
   )
 
   for (i in seq_along(join_order)) {
@@ -1075,8 +1065,7 @@ screen_data_list <- function(data_list,
       table = tbl,
       by = by_txt,
       before = before,
-      after = after,
-      stringsAsFactors = FALSE
+      after = after
     ))
 
     if (verbose) {

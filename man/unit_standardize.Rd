@@ -10,7 +10,8 @@ unit_standardize(
   value_col,
   unit_col,
   change_rules,
-  extract_numbers = FALSE
+  extract_numbers = FALSE,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -26,6 +27,8 @@ unit_standardize(
 
 \item{extract_numbers}{A logical value indicating whether to apply \code{extract_num} to extract numeric values
 from the value column.}
+
+\item{verbose}{A logical value indicating whether to print progress messages.}
 }
 \value{
 A data frame with subject units standardized.

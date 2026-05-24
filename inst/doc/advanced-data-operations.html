@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Advanced Data Operations</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Advanced Data Operations</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(clinpubr)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">library</span>(survival)</span></code></pre></div>
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>Clinical research often requires complex data manipulation:
+multi-source integration, fuzzy matching, temporal alignment, and format
+conversion. This vignette covers the advanced tools in
+<code>clinpubr</code> for these tasks:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Cohort Screening</strong> — CONSORT-style exclusion
+tracking</li>
+<li><strong>Data Merging</strong> — Substring and time-range
+matching</li>
+<li><strong>Data Transformation</strong> — Long/wide format,
+multi-choice data</li>
+<li><strong>Utility Functions</strong> — String manipulation, list
+operations</li>
+<li><strong>Multi-Table Screening</strong> —
+<code>screen_data_list()</code> for complex cohort workflows</li>
+</ol>
+</div>
+<div id="cohort-screening-with-exclusion-tracking" class="section level2">
+<h2>Cohort Screening with Exclusion Tracking</h2>
+<p><code>exclusion_count()</code> creates a CONSORT-style flow diagram,
+tracking how many patients are excluded at each stage:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>patients <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">patient_id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">round</span>(<span class="fu">rnorm</span>(<span class="dv">100</span>, <span class="dv">60</span>, <span class="dv">15</span>)),</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">gender =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;M&quot;</span>, <span class="st">&quot;F&quot;</span>), <span class="dv">100</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">has_baseline_data =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>), <span class="dv">100</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.9</span>, <span class="fl">0.1</span>), <span class="at">replace =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">meets_inclusion =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>), <span class="dv">100</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.8</span>, <span class="fl">0.2</span>), <span class="at">replace =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">complete_followup =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>), <span class="dv">100</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.85</span>, <span class="fl">0.15</span>), <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>exclusion_summary <span class="ot">&lt;-</span> <span class="fu">exclusion_count</span>(</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  patients,</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  age <span class="sc">&lt;</span> <span class="dv">50</span>,</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  gender <span class="sc">!=</span> <span class="st">&quot;M&quot;</span>,</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  <span class="sc">!</span>has_baseline_data,</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="sc">!</span>meets_inclusion,</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  <span class="sc">!</span>complete_followup</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>)</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(exclusion_summary, <span class="at">caption =</span> <span class="st">&quot;CONSORT-Style Cohort Flow&quot;</span>)</span></code></pre></div>
+<table>
+<caption>CONSORT-Style Cohort Flow</caption>
+<thead>
+<tr class="header">
+<th align="left">Criteria</th>
+<th align="right">N</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Initial N</td>
+<td align="right">100</td>
+</tr>
+<tr class="even">
+<td align="left">age &lt; 50</td>
+<td align="right">16</td>
+</tr>
+<tr class="odd">
+<td align="left">gender != “M”</td>
+<td align="right">44</td>
+</tr>
+<tr class="even">
+<td align="left">!has_baseline_data</td>
+<td align="right">7</td>
+</tr>
+<tr class="odd">
+<td align="left">!meets_inclusion</td>
+<td align="right">6</td>
+</tr>
+<tr class="even">
+<td align="left">!complete_followup</td>
+<td align="right">7</td>
+</tr>
+<tr class="odd">
+<td align="left">Final N</td>
+<td align="right">20</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Retention rate:&quot;</span>, <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> exclusion_summary<span class="sc">$</span>N[<span class="fu">nrow</span>(exclusion_summary)] <span class="sc">/</span> exclusion_summary<span class="sc">$</span>N[<span class="dv">1</span>], <span class="dv">1</span>), <span class="st">&quot;%</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; Retention rate: 20 %</span></span></code></pre></div>
+<p>Customize exclusion criteria names:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>exclusion_flow <span class="ot">&lt;-</span> <span class="fu">exclusion_count</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  patients,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  age <span class="sc">&lt;</span> <span class="dv">18</span> <span class="sc">|</span> age <span class="sc">&gt;</span> <span class="dv">80</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="sc">!</span>has_baseline_data,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="sc">!</span>meets_inclusion,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">.criteria_names =</span> <span class="fu">c</span>(</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>    <span class="st">&quot;Age outside 18-80 range&quot;</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>    <span class="st">&quot;Missing baseline data&quot;</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>    <span class="st">&quot;Does not meet inclusion criteria&quot;</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  )</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>)</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(exclusion_flow, <span class="at">caption =</span> <span class="st">&quot;Custom Exclusion Flow&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Custom Exclusion Flow</caption>
+<thead>
+<tr class="header">
+<th align="left">Criteria</th>
+<th align="right">N</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Initial N</td>
+<td align="right">100</td>
+</tr>
+<tr class="even">
+<td align="left">Age outside 18-80 range</td>
+<td align="right">9</td>
+</tr>
+<tr class="odd">
+<td align="left">Missing baseline data</td>
+<td align="right">10</td>
+</tr>
+<tr class="even">
+<td align="left">Does not meet inclusion criteria</td>
+<td align="right">14</td>
+</tr>
+<tr class="odd">
+<td align="left">Final N</td>
+<td align="right">67</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="data-merging-strategies" class="section level2">
+<h2>Data Merging Strategies</h2>
+<div id="merge-by-substring-matching" class="section level3">
+<h3>Merge by Substring Matching</h3>
+<p><code>merge_by_substring()</code> matches records when exact
+identifiers don’t align (e.g., mapping free-text diagnoses to ICD
+codes):</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>medical_terms <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">match_term =</span> <span class="fu">c</span>(</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>    <span class="st">&quot;Type 2 Diabetes&quot;</span>, <span class="st">&quot;Hypertension&quot;</span>, <span class="st">&quot;Coronary Artery Disease&quot;</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>    <span class="st">&quot;Coronary Disease&quot;</span>, <span class="st">&quot;Chronic Kidney Disease&quot;</span>, <span class="st">&quot;Heart Failure&quot;</span>, <span class="st">&quot;Atrial Fibrillation&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  ),</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">standard_term =</span> <span class="fu">c</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>    <span class="st">&quot;Type 2 Diabetes Mellitus&quot;</span>, <span class="st">&quot;Hypertension&quot;</span>, <span class="st">&quot;Coronary Artery Disease&quot;</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>    <span class="st">&quot;Coronary Artery Disease&quot;</span>, <span class="st">&quot;Chronic Kidney Disease&quot;</span>, <span class="st">&quot;Heart Failure&quot;</span>, <span class="st">&quot;Atrial Fibrillation&quot;</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  ),</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  <span class="at">icd_code =</span> <span class="fu">c</span>(<span class="st">&quot;E11&quot;</span>, <span class="st">&quot;I10&quot;</span>, <span class="st">&quot;I25&quot;</span>, <span class="st">&quot;I25&quot;</span>, <span class="st">&quot;N18&quot;</span>, <span class="st">&quot;I50&quot;</span>, <span class="st">&quot;I48&quot;</span>),</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="at">category =</span> <span class="fu">c</span>(</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>    <span class="st">&quot;Endocrine&quot;</span>, <span class="st">&quot;Cardiovascular&quot;</span>, <span class="st">&quot;Cardiovascular&quot;</span>, <span class="st">&quot;Cardiovascular&quot;</span>,</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>    <span class="st">&quot;Renal&quot;</span>, <span class="st">&quot;Cardiovascular&quot;</span>, <span class="st">&quot;Cardiovascular&quot;</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>  )</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>)</span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>patient_diagnoses <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>  <span class="at">patient_id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>,</span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>  <span class="at">diagnosis_text =</span> <span class="fu">c</span>(</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>    <span class="st">&quot;Severe Type 2 Diabetes&quot;</span>, <span class="st">&quot;Type 2 Diabetes Mellitus&quot;</span>,</span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>    <span class="st">&quot;Type 2 Diabetes with Complications&quot;</span>, <span class="st">&quot;Essential Hypertension&quot;</span>,</span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>    <span class="st">&quot;Hypertensive disease&quot;</span>, <span class="st">&quot;CAD - Coronary Artery Disease&quot;</span>,</span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>    <span class="st">&quot;Coronary disease&quot;</span>, <span class="st">&quot;CKD Stage 3&quot;</span>,</span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>    <span class="st">&quot;Congestive Heart Failure&quot;</span>, <span class="st">&quot;Heart failure chronic&quot;</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>  )</span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>)</span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>merged_substring <span class="ot">&lt;-</span> <span class="fu">merge_by_substring</span>(</span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a>  <span class="at">data =</span> patient_diagnoses,</span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a>  <span class="at">key_df =</span> medical_terms,</span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a>  <span class="at">search_col =</span> <span class="st">&quot;diagnosis_text&quot;</span>,</span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a>  <span class="at">key_col =</span> <span class="st">&quot;match_term&quot;</span>,</span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a>  <span class="at">value_cols =</span> <span class="fu">c</span>(<span class="st">&quot;standard_term&quot;</span>, <span class="st">&quot;icd_code&quot;</span>, <span class="st">&quot;category&quot;</span>)</span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a>)</span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(medical_terms, <span class="at">caption =</span> <span class="st">&quot;Medical Terms Table&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Medical Terms Table</caption>
+<colgroup>
+<col width="32%" />
+<col width="34%" />
+<col width="12%" />
+<col width="20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">match_term</th>
+<th align="left">standard_term</th>
+<th align="left">icd_code</th>
+<th align="left">category</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Type 2 Diabetes</td>
+<td align="left">Type 2 Diabetes Mellitus</td>
+<td align="left">E11</td>
+<td align="left">Endocrine</td>
+</tr>
+<tr class="even">
+<td align="left">Hypertension</td>
+<td align="left">Hypertension</td>
+<td align="left">I10</td>
+<td align="left">Cardiovascular</td>
+</tr>
+<tr class="odd">
+<td align="left">Coronary Artery Disease</td>
+<td align="left">Coronary Artery Disease</td>
+<td align="left">I25</td>
+<td align="left">Cardiovascular</td>
+</tr>
+<tr class="even">
+<td align="left">Coronary Disease</td>
+<td align="left">Coronary Artery Disease</td>
+<td align="left">I25</td>
+<td align="left">Cardiovascular</td>
+</tr>
+<tr class="odd">
+<td align="left">Chronic Kidney Disease</td>
+<td align="left">Chronic Kidney Disease</td>
+<td align="left">N18</td>
+<td align="left">Renal</td>
+</tr>
+<tr class="even">
+<td align="left">Heart Failure</td>
+<td align="left">Heart Failure</td>
+<td align="left">I50</td>
+<td align="left">Cardiovascular</td>
+</tr>
+<tr class="odd">
+<td align="left">Atrial Fibrillation</td>
+<td align="left">Atrial Fibrillation</td>
+<td align="left">I48</td>
+<td align="left">Cardiovascular</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(merged_substring, <span class="at">caption =</span> <span class="st">&quot;Diagnoses with Mapped ICD Codes&quot;</span>)</span></code></pre></div>
+<table style="width:100%;">
+<caption>Diagnoses with Mapped ICD Codes</caption>
+<colgroup>
+<col width="36%" />
+<col width="11%" />
+<col width="26%" />
+<col width="9%" />
+<col width="15%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">diagnosis_text</th>
+<th align="right">patient_id</th>
+<th align="left">standard_term</th>
+<th align="left">icd_code</th>
+<th align="left">category</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">CAD - Coronary Artery Disease</td>
+<td align="right">6</td>
+<td align="left">Coronary Artery Disease</td>
+<td align="left">I25</td>
+<td align="left">Cardiovascular</td>
+</tr>
+<tr class="even">
+<td align="left">CKD Stage 3</td>
+<td align="right">8</td>
+<td align="left">NA</td>
+<td align="left">NA</td>
+<td align="left">NA</td>
+</tr>
+<tr class="odd">
+<td align="left">Congestive Heart Failure</td>
+<td align="right">9</td>
+<td align="left">Heart Failure</td>
+<td align="left">I50</td>
+<td align="left">Cardiovascular</td>
+</tr>
+<tr class="even">
+<td align="left">Coronary disease</td>
+<td align="right">7</td>
+<td align="left">Coronary Artery Disease</td>
+<td align="left">I25</td>
+<td align="left">Cardiovascular</td>
+</tr>
+<tr class="odd">
+<td align="left">Essential Hypertension</td>
+<td align="right">4</td>
+<td align="left">Hypertension</td>
+<td align="left">I10</td>
+<td align="left">Cardiovascular</td>
+</tr>
+<tr class="even">
+<td align="left">Heart failure chronic</td>
+<td align="right">10</td>
+<td align="left">Heart Failure</td>
+<td align="left">I50</td>
+<td align="left">Cardiovascular</td>
+</tr>
+<tr class="odd">
+<td align="left">Hypertensive disease</td>
+<td align="right">5</td>
+<td align="left">NA</td>
+<td align="left">NA</td>
+<td align="left">NA</td>
+</tr>
+<tr class="even">
+<td align="left">Severe Type 2 Diabetes</td>
+<td align="right">1</td>
+<td align="left">Type 2 Diabetes Mellitus</td>
+<td align="left">E11</td>
+<td align="left">Endocrine</td>
+</tr>
+<tr class="odd">
+<td align="left">Type 2 Diabetes Mellitus</td>
+<td align="right">2</td>
+<td align="left">Type 2 Diabetes Mellitus</td>
+<td align="left">E11</td>
+<td align="left">Endocrine</td>
+</tr>
+<tr class="even">
+<td align="left">Type 2 Diabetes with Complications</td>
+<td align="right">3</td>
+<td align="left">Type 2 Diabetes Mellitus</td>
+<td align="left">E11</td>
+<td align="left">Endocrine</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="merge-by-range-time-based-matching" class="section level3">
+<h3>Merge by Range (Time-Based Matching)</h3>
+<p><code>merge_by_range()</code> matches events within specific time
+windows (e.g., lab results during hospitalization):</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>patient_visits <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="at">patient_id =</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">each =</span> <span class="dv">2</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">visit_id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">visit_start =</span> <span class="fu">as.Date</span>(<span class="fu">c</span>(</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>    <span class="st">&quot;2023-01-01&quot;</span>, <span class="st">&quot;2023-06-01&quot;</span>, <span class="st">&quot;2023-02-01&quot;</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>    <span class="st">&quot;2023-07-01&quot;</span>, <span class="st">&quot;2023-03-01&quot;</span>, <span class="st">&quot;2023-08-01&quot;</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  )),</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">visit_end =</span> <span class="fu">as.Date</span>(<span class="fu">c</span>(</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>    <span class="st">&quot;2023-01-10&quot;</span>, <span class="st">&quot;2023-06-10&quot;</span>, <span class="st">&quot;2023-02-10&quot;</span>,</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>    <span class="st">&quot;2023-07-10&quot;</span>, <span class="st">&quot;2023-03-10&quot;</span>, <span class="st">&quot;2023-08-10&quot;</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>  ))</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>)</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>lab_results <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  <span class="at">lab_id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>,</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  <span class="at">patient_id =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>),</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>  <span class="at">test_date =</span> <span class="fu">as.Date</span>(<span class="fu">c</span>(</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>    <span class="st">&quot;2023-01-05&quot;</span>, <span class="st">&quot;2023-06-05&quot;</span>, <span class="st">&quot;2023-02-03&quot;</span>,</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>    <span class="st">&quot;2023-07-08&quot;</span>, <span class="st">&quot;2023-03-15&quot;</span>, <span class="st">&quot;2023-08-05&quot;</span></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>  )),</span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>  <span class="at">test_name =</span> <span class="fu">c</span>(<span class="st">&quot;Glucose&quot;</span>, <span class="st">&quot;HbA1c&quot;</span>, <span class="st">&quot;Glucose&quot;</span>, <span class="st">&quot;Creatinine&quot;</span>, <span class="st">&quot;Glucose&quot;</span>, <span class="st">&quot;Lipid panel&quot;</span>),</span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>  <span class="at">result =</span> <span class="fu">round</span>(<span class="fu">rnorm</span>(<span class="dv">6</span>, <span class="dv">100</span>, <span class="dv">15</span>), <span class="dv">1</span>)</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>)</span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a></span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>merged_range <span class="ot">&lt;-</span> <span class="fu">merge_by_range</span>(</span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>  <span class="at">x =</span> patient_visits, <span class="at">y =</span> lab_results,</span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a>  <span class="at">by =</span> <span class="st">&quot;patient_id&quot;</span>,</span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a>  <span class="at">x_start =</span> <span class="st">&quot;visit_start&quot;</span>, <span class="at">x_end =</span> <span class="st">&quot;visit_end&quot;</span>,</span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>  <span class="at">y_val =</span> <span class="st">&quot;test_date&quot;</span></span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a>)</span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a></span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(merged_range, <span class="at">caption =</span> <span class="st">&quot;Labs Matched to Visit Windows&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Labs Matched to Visit Windows</caption>
+<colgroup>
+<col width="11%" />
+<col width="9%" />
+<col width="13%" />
+<col width="11%" />
+<col width="7%" />
+<col width="11%" />
+<col width="13%" />
+<col width="7%" />
+<col width="13%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">patient_id</th>
+<th align="right">visit_id</th>
+<th align="left">visit_start</th>
+<th align="left">visit_end</th>
+<th align="right">lab_id</th>
+<th align="left">test_date</th>
+<th align="left">test_name</th>
+<th align="right">result</th>
+<th align="right">since_start</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">2023-01-01</td>
+<td align="left">2023-01-10</td>
+<td align="right">1</td>
+<td align="left">2023-01-05</td>
+<td align="left">Glucose</td>
+<td align="right">89.3</td>
+<td align="right">4</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="left">2023-06-01</td>
+<td align="left">2023-06-10</td>
+<td align="right">2</td>
+<td align="left">2023-06-05</td>
+<td align="left">HbA1c</td>
+<td align="right">88.7</td>
+<td align="right">4</td>
+</tr>
+<tr class="odd">
+<td align="right">2</td>
+<td align="right">3</td>
+<td align="left">2023-02-01</td>
+<td align="left">2023-02-10</td>
+<td align="right">3</td>
+<td align="left">2023-02-03</td>
+<td align="left">Glucose</td>
+<td align="right">85.9</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">4</td>
+<td align="left">2023-07-01</td>
+<td align="left">2023-07-10</td>
+<td align="right">4</td>
+<td align="left">2023-07-08</td>
+<td align="left">Creatinine</td>
+<td align="right">84.2</td>
+<td align="right">7</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">6</td>
+<td align="left">2023-08-01</td>
+<td align="left">2023-08-10</td>
+<td align="right">6</td>
+<td align="left">2023-08-05</td>
+<td align="left">Lipid panel</td>
+<td align="right">105.0</td>
+<td align="right">4</td>
+</tr>
+<tr class="even">
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">NA</td>
+<td align="left">NA</td>
+<td align="right">5</td>
+<td align="left">2023-03-15</td>
+<td align="left">Glucose</td>
+<td align="right">93.4</td>
+<td align="right">NA</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="data-transformation" class="section level2">
+<h2>Data Transformation</h2>
+<div id="long-to-wide-format" class="section level3">
+<h3>Long to Wide Format</h3>
+<p><code>to_wide()</code> converts long-format data (one row per
+measurement) to wide format (one row per patient) to facilitate
+analysis:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>long_labs <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="at">patient_id =</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="at">each =</span> <span class="dv">3</span>),</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">visit =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="at">times =</span> <span class="fu">c</span>(<span class="dv">8</span>, <span class="dv">7</span>)),</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">test =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;glucose&quot;</span>, <span class="st">&quot;creatinine&quot;</span>, <span class="st">&quot;cholesterol&quot;</span>), <span class="dv">5</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">round</span>(<span class="fu">rnorm</span>(<span class="dv">15</span>, <span class="dv">100</span>, <span class="dv">20</span>), <span class="dv">1</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>wide_labs <span class="ot">&lt;-</span> <span class="fu">to_wide</span>(</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="at">df =</span> long_labs,</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>  <span class="at">keys =</span> <span class="fu">c</span>(<span class="st">&quot;patient_id&quot;</span>, <span class="st">&quot;visit&quot;</span>),</span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>  <span class="at">item_col =</span> <span class="st">&quot;test&quot;</span>,</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>  <span class="at">value_col =</span> <span class="st">&quot;value&quot;</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>)</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(long_labs), <span class="at">caption =</span> <span class="st">&quot;Laboratory Data - Long Format&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Laboratory Data - Long Format</caption>
+<thead>
+<tr class="header">
+<th align="right">patient_id</th>
+<th align="right">visit</th>
+<th align="left">test</th>
+<th align="right">value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">glucose</td>
+<td align="right">59.7</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">creatinine</td>
+<td align="right">104.2</td>
+</tr>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">cholesterol</td>
+<td align="right">124.7</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="left">glucose</td>
+<td align="right">140.8</td>
+</tr>
+<tr class="odd">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="left">creatinine</td>
+<td align="right">126.0</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="left">cholesterol</td>
+<td align="right">115.1</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(wide_labs), <span class="at">caption =</span> <span class="st">&quot;Laboratory Data - Wide Format&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Laboratory Data - Wide Format</caption>
+<thead>
+<tr class="header">
+<th align="right">patient_id</th>
+<th align="right">visit</th>
+<th align="right">cholesterol</th>
+<th align="right">creatinine</th>
+<th align="right">glucose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">124.7</td>
+<td align="right">104.2</td>
+<td align="right">59.7</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">115.1</td>
+<td align="right">126.0</td>
+<td align="right">140.8</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">NA</td>
+<td align="right">88.0</td>
+<td align="right">65.5</td>
+</tr>
+<tr class="even">
+<td align="right">3</td>
+<td align="right">2</td>
+<td align="right">93.0</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+</tr>
+<tr class="odd">
+<td align="right">4</td>
+<td align="right">2</td>
+<td align="right">74.8</td>
+<td align="right">97.9</td>
+<td align="right">114.1</td>
+</tr>
+<tr class="even">
+<td align="right">5</td>
+<td align="right">2</td>
+<td align="right">104.7</td>
+<td align="right">118.2</td>
+<td align="right">133.7</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="multi-choice-data" class="section level3">
+<h3>Multi-Choice Data</h3>
+<p><code>split_multichoice()</code> splits comma-separated multi-choice
+columns into binary indicators; <code>combine_multichoice()</code>
+recombines them:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>survey_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="at">symptoms =</span> <span class="fu">sapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="cf">function</span>(x) {</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>    <span class="fu">paste</span>(<span class="fu">sample</span>(</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>      <span class="fu">c</span>(<span class="st">&quot;fever&quot;</span>, <span class="st">&quot;cough&quot;</span>, <span class="st">&quot;headache&quot;</span>, <span class="st">&quot;fatigue&quot;</span>),</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>      <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">1</span>)</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>    ), <span class="at">collapse =</span> <span class="st">&quot;,&quot;</span>)</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>  }),</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>  <span class="at">comorbidities =</span> <span class="fu">sapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="cf">function</span>(x) {</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>    <span class="fu">paste</span>(<span class="fu">sample</span>(</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>      <span class="fu">c</span>(<span class="st">&quot;diabetes&quot;</span>, <span class="st">&quot;hypertension&quot;</span>),</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>      <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="dv">1</span>)</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>    ), <span class="at">collapse =</span> <span class="st">&quot;,&quot;</span>)</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>  })</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>)</span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>symptoms_split <span class="ot">&lt;-</span> <span class="fu">split_multichoice</span>(</span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>  survey_data,</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>  <span class="at">quest_cols =</span> <span class="fu">c</span>(<span class="st">&quot;symptoms&quot;</span>, <span class="st">&quot;comorbidities&quot;</span>),</span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>  <span class="at">split =</span> <span class="st">&quot;,&quot;</span>,</span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a>  <span class="at">remove_space =</span> <span class="cn">FALSE</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a>)</span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a></span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(survey_data), <span class="at">caption =</span> <span class="st">&quot;Multi-Choice Data&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Multi-Choice Data</caption>
+<thead>
+<tr class="header">
+<th align="right">id</th>
+<th align="left">symptoms</th>
+<th align="left">comorbidities</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="left">fever</td>
+<td align="left">diabetes</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="left">cough,fever,fatigue</td>
+<td align="left">diabetes,hypertension</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="left">fever,cough,fatigue</td>
+<td align="left">hypertension</td>
+</tr>
+<tr class="even">
+<td align="right">4</td>
+<td align="left">fever,headache</td>
+<td align="left">diabetes</td>
+</tr>
+<tr class="odd">
+<td align="right">5</td>
+<td align="left">headache,fatigue</td>
+<td align="left">hypertension,diabetes</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="left">fatigue,cough,headache</td>
+<td align="left">diabetes</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(symptoms_split), <span class="at">caption =</span> <span class="st">&quot;Split Multi-Choice Data&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Split Multi-Choice Data</caption>
+<colgroup>
+<col width="2%" />
+<col width="12%" />
+<col width="12%" />
+<col width="14%" />
+<col width="15%" />
+<col width="19%" />
+<col width="22%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">id</th>
+<th align="left">symptoms_fever</th>
+<th align="left">symptoms_cough</th>
+<th align="left">symptoms_fatigue</th>
+<th align="left">symptoms_headache</th>
+<th align="left">comorbidities_diabetes</th>
+<th align="left">comorbidities_hypertension</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+<td align="left">FALSE</td>
+<td align="left">FALSE</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+<td align="left">FALSE</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="even">
+<td align="right">4</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+<td align="left">FALSE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="odd">
+<td align="right">5</td>
+<td align="left">FALSE</td>
+<td align="left">FALSE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="left">FALSE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>combined <span class="ot">&lt;-</span> <span class="fu">combine_multichoice</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  symptoms_split,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">quest_cols =</span> <span class="fu">list</span>(</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>    <span class="at">respiratory =</span> <span class="fu">c</span>(<span class="st">&quot;symptoms_cough&quot;</span>, <span class="st">&quot;symptoms_fatigue&quot;</span>),</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>    <span class="at">systemic =</span> <span class="fu">c</span>(<span class="st">&quot;symptoms_fever&quot;</span>, <span class="st">&quot;symptoms_headache&quot;</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  ),</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>  <span class="at">sep =</span> <span class="st">&quot;,&quot;</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>)</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(combined), <span class="at">caption =</span> <span class="st">&quot;Combined Symptom Groups&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Combined Symptom Groups</caption>
+<colgroup>
+<col width="3%" />
+<col width="28%" />
+<col width="32%" />
+<col width="17%" />
+<col width="18%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">id</th>
+<th align="left">comorbidities_diabetes</th>
+<th align="left">comorbidities_hypertension</th>
+<th align="left">respiratory</th>
+<th align="left">systemic</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+<td align="left"></td>
+<td align="left">fever</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">cough,fatigue</td>
+<td align="left">fever</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="left">FALSE</td>
+<td align="left">TRUE</td>
+<td align="left">cough,fatigue</td>
+<td align="left">fever</td>
+</tr>
+<tr class="even">
+<td align="right">4</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+<td align="left"></td>
+<td align="left">fever,headache</td>
+</tr>
+<tr class="odd">
+<td align="right">5</td>
+<td align="left">TRUE</td>
+<td align="left">TRUE</td>
+<td align="left">fatigue</td>
+<td align="left">headache</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="left">TRUE</td>
+<td align="left">FALSE</td>
+<td align="left">cough,fatigue</td>
+<td align="left">headache</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="utility-functions" class="section level2">
+<h2>Utility Functions</h2>
+<div id="string-manipulation" class="section level3">
+<h3>String Manipulation</h3>
+<p><code>common_prefix()</code> extracts the common prefix from a
+character vector, could be used when processing hospital exports to
+identify files from the same patient or batch processing multi-site
+survey data by site prefix.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>file_names <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;patient_001_lab.csv&quot;</span>, <span class="st">&quot;patient_001_visit.csv&quot;</span>, <span class="st">&quot;patient_001_demo.csv&quot;</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="fu">common_prefix</span>(file_names)</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;patient_001_&quot;</span></span></code></pre></div>
+<p><code>str_match_replace()</code> replaces matched patterns in strings
+with specified replacements, could be used when standardizing lab test
+names across hospitals or unifying option labels across translated
+questionnaires.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>test_names <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Glucose_Fasting&quot;</span>, <span class="st">&quot;Glucose_Random&quot;</span>, <span class="st">&quot;Cholesterol_Total&quot;</span>, <span class="st">&quot;LDL_Calculated&quot;</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>standardized <span class="ot">&lt;-</span> <span class="fu">str_match_replace</span>(</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="at">x =</span> test_names,</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>  <span class="at">to_match =</span> <span class="fu">c</span>(<span class="st">&quot;Glucose&quot;</span>, <span class="st">&quot;Cholesterol&quot;</span>, <span class="st">&quot;LDL&quot;</span>),</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>  <span class="at">to_replace =</span> <span class="fu">c</span>(<span class="st">&quot;GLU&quot;</span>, <span class="st">&quot;CHOL&quot;</span>, <span class="st">&quot;LDL_CHOL&quot;</span>)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>)</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">data.frame</span>(<span class="at">Original =</span> test_names, <span class="at">Standardized =</span> standardized),</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">&quot;Test Name Standardization&quot;</span></span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>)</span></code></pre></div>
+<table>
+<caption>Test Name Standardization</caption>
+<thead>
+<tr class="header">
+<th align="left">Original</th>
+<th align="left">Standardized</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Glucose_Fasting</td>
+<td align="left">GLU_Fasting</td>
+</tr>
+<tr class="even">
+<td align="left">Glucose_Random</td>
+<td align="left">GLU_Random</td>
+</tr>
+<tr class="odd">
+<td align="left">Cholesterol_Total</td>
+<td align="left">CHOL_Total</td>
+</tr>
+<tr class="even">
+<td align="left">LDL_Calculated</td>
+<td align="left">LDL_CHOL_Calculated</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="list-and-data-frame-operations" class="section level3">
+<h3>List and Data Frame Operations</h3>
+<p><code>add_lists()</code> adds corresponding elements of two lists
+element-wise, could be used when aggregating disease incidence counts
+across time periods or summing response frequencies across survey
+sites.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>list1 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">diabetes =</span> <span class="dv">10</span>, <span class="at">hypertension =</span> <span class="dv">20</span>, <span class="at">asthma =</span> <span class="dv">5</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>list2 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">diabetes =</span> <span class="dv">15</span>, <span class="at">hypertension =</span> <span class="dv">25</span>, <span class="at">asthma =</span> <span class="dv">8</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="fu">add_lists</span>(list1, list2)</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt; $diabetes</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="co">#&gt; [1] 25</span></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co">#&gt; $hypertension</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="co">#&gt; [1] 45</span></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt; $asthma</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co">#&gt; [1] 13</span></span></code></pre></div>
+<p><code>merge_ordered_vectors()</code> merges multiple ordered vectors
+preserving unique elements and original ordering, could be used when
+combining inclusion criteria lists from multi-site studies or merging
+question orders across questionnaire versions.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>sites <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;Diabetes&quot;</span>, <span class="st">&quot;Hypertension&quot;</span>, <span class="st">&quot;Heart Failure&quot;</span>, <span class="st">&quot;CKD&quot;</span>),</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;Hypertension&quot;</span>, <span class="st">&quot;COPD&quot;</span>, <span class="st">&quot;Diabetes&quot;</span>, <span class="st">&quot;Cancer&quot;</span>),</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;CKD&quot;</span>, <span class="st">&quot;Diabetes&quot;</span>, <span class="st">&quot;Stroke&quot;</span>, <span class="st">&quot;Hypertension&quot;</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>)</span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a><span class="fu">merge_ordered_vectors</span>(sites)</span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;COPD&quot;          &quot;Diabetes&quot;      &quot;Stroke&quot;        &quot;Hypertension&quot; </span></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a><span class="co">#&gt; [5] &quot;Heart Failure&quot; &quot;Cancer&quot;        &quot;CKD&quot;</span></span></code></pre></div>
+<p><code>replace_elements()</code> replaces specified elements in a
+vector with new values, could be used when correcting data entry errors
+in clinical data or harmonizing option codes across survey
+interviewers.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>sample_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>  <span class="at">group =</span> <span class="fu">c</span>(<span class="st">&quot;Cntrol&quot;</span>, <span class="st">&quot;Treetment&quot;</span>, <span class="st">&quot;Placebo&quot;</span>, <span class="st">&quot;Cntrol&quot;</span>, <span class="st">&quot;Treatment&quot;</span>),</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="at">value =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span></span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>)</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>recoded <span class="ot">&lt;-</span> <span class="fu">replace_elements</span>(</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>  <span class="at">x =</span> sample_data<span class="sc">$</span>group,</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>  <span class="at">from =</span> <span class="fu">c</span>(<span class="st">&quot;Cntrol&quot;</span>, <span class="st">&quot;Treetment&quot;</span>),</span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a>  <span class="at">to =</span> <span class="fu">c</span>(<span class="st">&quot;Control&quot;</span>, <span class="st">&quot;Treatment&quot;</span>)</span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>)</span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">data.frame</span>(<span class="at">Original =</span> sample_data<span class="sc">$</span>group, <span class="at">Recoded =</span> recoded),</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">&quot;Group Recoding&quot;</span></span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a>)</span></code></pre></div>
+<table>
+<caption>Group Recoding</caption>
+<thead>
+<tr class="header">
+<th align="left">Original</th>
+<th align="left">Recoded</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Cntrol</td>
+<td align="left">Control</td>
+</tr>
+<tr class="even">
+<td align="left">Treetment</td>
+<td align="left">Treatment</td>
+</tr>
+<tr class="odd">
+<td align="left">Placebo</td>
+<td align="left">Placebo</td>
+</tr>
+<tr class="even">
+<td align="left">Cntrol</td>
+<td align="left">Control</td>
+</tr>
+<tr class="odd">
+<td align="left">Treatment</td>
+<td align="left">Treatment</td>
+</tr>
+</tbody>
+</table>
+<p><code>fill_with_last()</code> fills missing values with the last
+valid observation (LOCF), could be used when handling merged cells from
+Excel imports of EMR data or filling respondent demographics across
+repeated survey measures.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>time_series <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">120</span>, <span class="cn">NA</span>, <span class="cn">NA</span>, <span class="dv">125</span>, <span class="cn">NA</span>, <span class="dv">130</span>, <span class="cn">NA</span>, <span class="cn">NA</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">data.frame</span>(<span class="at">Original =</span> time_series, <span class="at">Filled =</span> <span class="fu">fill_with_last</span>(time_series)),</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">&quot;Last Observation Carried Forward&quot;</span></span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>)</span></code></pre></div>
+<table>
+<caption>Last Observation Carried Forward</caption>
+<thead>
+<tr class="header">
+<th align="right">Original</th>
+<th align="right">Filled</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">120</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="right">NA</td>
+<td align="right">120</td>
+</tr>
+<tr class="odd">
+<td align="right">NA</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="right">125</td>
+<td align="right">125</td>
+</tr>
+<tr class="odd">
+<td align="right">NA</td>
+<td align="right">125</td>
+</tr>
+<tr class="even">
+<td align="right">130</td>
+<td align="right">130</td>
+</tr>
+<tr class="odd">
+<td align="right">NA</td>
+<td align="right">130</td>
+</tr>
+<tr class="even">
+<td align="right">NA</td>
+<td align="right">130</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="multi-table-cohort-screening" class="section level2">
+<h2>Multi-Table Cohort Screening</h2>
+<p><code>screen_data_list()</code> filters and joins multiple tables
+based on clinical criteria, with full audit trails. This is essential
+for retrospective EHR studies.</p>
+<div id="scenario-building-a-diabetes-cohort" class="section level3">
+<h3>Scenario: Building a Diabetes Cohort</h3>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="co"># Patient demographics</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>patient <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a>  <span class="at">pid =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>,</span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">sample</span>(<span class="dv">25</span><span class="sc">:</span><span class="dv">75</span>, <span class="dv">50</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>  <span class="at">gender =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;M&quot;</span>, <span class="st">&quot;F&quot;</span>), <span class="dv">50</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>)</span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a><span class="co"># Admission records</span></span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a>admission <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a>  <span class="at">pid =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">9</span>, <span class="dv">10</span>, <span class="dv">11</span>, <span class="dv">12</span>),</span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a>  <span class="at">vid =</span> <span class="dv">101</span><span class="sc">:</span><span class="dv">115</span>,</span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a>  <span class="at">admit_day =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">30</span>, <span class="dv">5</span>, <span class="dv">45</span>, <span class="dv">10</span>, <span class="dv">60</span>, <span class="dv">15</span>, <span class="dv">20</span>, <span class="dv">25</span>, <span class="dv">35</span>, <span class="dv">40</span>, <span class="dv">50</span>, <span class="dv">55</span>, <span class="dv">65</span>, <span class="dv">70</span>)</span>
+<span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a>)</span>
+<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a></span>
+<span id="cb19-15"><a href="#cb19-15" tabindex="-1"></a><span class="co"># Diagnosis records</span></span>
+<span id="cb19-16"><a href="#cb19-16" tabindex="-1"></a>diagnosis <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb19-17"><a href="#cb19-17" tabindex="-1"></a>  <span class="at">pid =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">9</span>, <span class="dv">10</span>, <span class="dv">11</span>, <span class="dv">12</span>),</span>
+<span id="cb19-18"><a href="#cb19-18" tabindex="-1"></a>  <span class="at">vid =</span> <span class="fu">c</span>(<span class="dv">101</span>, <span class="dv">102</span>, <span class="dv">103</span>, <span class="dv">104</span>, <span class="dv">105</span>, <span class="dv">107</span>, <span class="dv">108</span>, <span class="dv">109</span>, <span class="dv">110</span>, <span class="dv">111</span>, <span class="dv">112</span>, <span class="dv">113</span>, <span class="dv">114</span>, <span class="dv">115</span>),</span>
+<span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a>  <span class="at">dx_day =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">30</span>, <span class="dv">5</span>, <span class="dv">45</span>, <span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">20</span>, <span class="dv">25</span>, <span class="dv">35</span>, <span class="dv">40</span>, <span class="dv">50</span>, <span class="dv">55</span>, <span class="dv">65</span>, <span class="dv">70</span>),</span>
+<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a>  <span class="at">icd =</span> <span class="fu">c</span>(<span class="st">&quot;E11&quot;</span>, <span class="st">&quot;I10&quot;</span>, <span class="st">&quot;N18&quot;</span>, <span class="st">&quot;E11&quot;</span>, <span class="st">&quot;E11&quot;</span>, <span class="st">&quot;I25&quot;</span>, <span class="st">&quot;E11&quot;</span>, <span class="st">&quot;J18&quot;</span>, <span class="st">&quot;E11&quot;</span>, <span class="st">&quot;I10&quot;</span>, <span class="st">&quot;E11&quot;</span>, <span class="st">&quot;N18&quot;</span>, <span class="st">&quot;E11&quot;</span>, <span class="st">&quot;I50&quot;</span>)</span>
+<span id="cb19-21"><a href="#cb19-21" tabindex="-1"></a>)</span>
+<span id="cb19-22"><a href="#cb19-22" tabindex="-1"></a></span>
+<span id="cb19-23"><a href="#cb19-23" tabindex="-1"></a><span class="co"># Lab results</span></span>
+<span id="cb19-24"><a href="#cb19-24" tabindex="-1"></a>lab <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb19-25"><a href="#cb19-25" tabindex="-1"></a>  <span class="at">pid =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">9</span>, <span class="dv">10</span>, <span class="dv">11</span>, <span class="dv">12</span>),</span>
+<span id="cb19-26"><a href="#cb19-26" tabindex="-1"></a>  <span class="at">vid =</span> <span class="fu">c</span>(<span class="dv">101</span>, <span class="dv">102</span>, <span class="dv">103</span>, <span class="dv">104</span>, <span class="dv">105</span>, <span class="dv">106</span>, <span class="dv">107</span>, <span class="dv">108</span>, <span class="dv">109</span>, <span class="dv">110</span>, <span class="dv">111</span>, <span class="dv">112</span>, <span class="dv">113</span>, <span class="dv">114</span>, <span class="dv">115</span>),</span>
+<span id="cb19-27"><a href="#cb19-27" tabindex="-1"></a>  <span class="at">lab_day =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">30</span>, <span class="dv">5</span>, <span class="dv">45</span>, <span class="dv">10</span>, <span class="dv">60</span>, <span class="dv">15</span>, <span class="dv">20</span>, <span class="dv">25</span>, <span class="dv">35</span>, <span class="dv">40</span>, <span class="dv">50</span>, <span class="dv">55</span>, <span class="dv">65</span>, <span class="dv">70</span>),</span>
+<span id="cb19-28"><a href="#cb19-28" tabindex="-1"></a>  <span class="at">HbA1c =</span> <span class="fu">c</span>(<span class="fl">8.5</span>, <span class="fl">7.2</span>, <span class="fl">9.1</span>, <span class="fl">7.8</span>, <span class="fl">8.0</span>, <span class="fl">6.9</span>, <span class="fl">7.5</span>, <span class="fl">8.2</span>, <span class="fl">7.0</span>, <span class="fl">9.5</span>, <span class="fl">7.8</span>, <span class="fl">8.1</span>, <span class="fl">7.3</span>, <span class="fl">8.8</span>, <span class="fl">7.6</span>)</span>
+<span id="cb19-29"><a href="#cb19-29" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="screen-and-filter" class="section level3">
+<h3>Screen and Filter</h3>
+<p>Select patients with diabetes (ICD: E11), keeping records from first
+diabetes diagnosis onward:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a>screened_data <span class="ot">&lt;-</span> <span class="fu">screen_data_list</span>(</span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>  <span class="at">data_list =</span> <span class="fu">list</span>(</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>    <span class="at">patient =</span> patient, <span class="at">admission =</span> admission,</span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>    <span class="at">diagnosis =</span> diagnosis, <span class="at">lab =</span> lab</span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>  ),</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>  <span class="at">entry_expr =</span> <span class="fu">any</span>(icd <span class="sc">==</span> <span class="st">&quot;E11&quot;</span>),</span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>  <span class="at">entry_level =</span> <span class="st">&quot;patient_id&quot;</span>,</span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a>  <span class="at">anchor_expr =</span> icd <span class="sc">==</span> <span class="st">&quot;E11&quot;</span>,</span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>  <span class="at">anchor_level =</span> <span class="st">&quot;date&quot;</span>,</span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a>  <span class="at">patient_id_map =</span> <span class="st">&quot;pid&quot;</span>,</span>
+<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a>  <span class="at">visit_id_map =</span> <span class="fu">c</span>(<span class="at">admission =</span> <span class="st">&quot;vid&quot;</span>, <span class="at">diagnosis =</span> <span class="st">&quot;vid&quot;</span>, <span class="at">lab =</span> <span class="st">&quot;vid&quot;</span>),</span>
+<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a>  <span class="at">date_map =</span> <span class="fu">c</span>(<span class="at">admission =</span> <span class="st">&quot;admit_day&quot;</span>, <span class="at">diagnosis =</span> <span class="st">&quot;dx_day&quot;</span>, <span class="at">lab =</span> <span class="st">&quot;lab_day&quot;</span>),</span>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a>  <span class="at">output =</span> <span class="st">&quot;list&quot;</span>,</span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a>  <span class="at">return_audit =</span> <span class="cn">TRUE</span></span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a>)</span>
+<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a></span>
+<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(screened_data<span class="sc">$</span>audit<span class="sc">$</span>entry_scope, <span class="at">caption =</span> <span class="st">&quot;Entry Stage Audit&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Entry Stage Audit</caption>
+<thead>
+<tr class="header">
+<th align="left">step</th>
+<th align="left">table</th>
+<th align="right">before</th>
+<th align="right">after</th>
+<th align="right">removed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">entry_scope</td>
+<td align="left">patient</td>
+<td align="right">50</td>
+<td align="right">7</td>
+<td align="right">43</td>
+</tr>
+<tr class="even">
+<td align="left">entry_scope</td>
+<td align="left">admission</td>
+<td align="right">15</td>
+<td align="right">10</td>
+<td align="right">5</td>
+</tr>
+<tr class="odd">
+<td align="left">entry_scope</td>
+<td align="left">diagnosis</td>
+<td align="right">14</td>
+<td align="right">9</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="left">entry_scope</td>
+<td align="left">lab</td>
+<td align="right">15</td>
+<td align="right">10</td>
+<td align="right">5</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(screened_data<span class="sc">$</span>audit<span class="sc">$</span>anchor_scope, <span class="at">caption =</span> <span class="st">&quot;Anchor Stage Audit&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Anchor Stage Audit</caption>
+<thead>
+<tr class="header">
+<th align="left">step</th>
+<th align="left">table</th>
+<th align="right">before</th>
+<th align="right">after</th>
+<th align="right">removed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">anchor_scope</td>
+<td align="left">patient</td>
+<td align="right">7</td>
+<td align="right">7</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">anchor_scope</td>
+<td align="left">admission</td>
+<td align="right">10</td>
+<td align="right">9</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="left">anchor_scope</td>
+<td align="left">diagnosis</td>
+<td align="right">9</td>
+<td align="right">8</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="left">anchor_scope</td>
+<td align="left">lab</td>
+<td align="right">10</td>
+<td align="right">9</td>
+<td align="right">1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="review-filtered-data" class="section level3">
+<h3>Review Filtered Data</h3>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(screened_data<span class="sc">$</span>data<span class="sc">$</span>patient), <span class="at">caption =</span> <span class="st">&quot;Filtered Patients&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Filtered Patients</caption>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">pid</th>
+<th align="right">age</th>
+<th align="left">gender</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="right">51</td>
+<td align="left">M</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="right">2</td>
+<td align="right">72</td>
+<td align="left">M</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="right">3</td>
+<td align="right">38</td>
+<td align="left">M</td>
+</tr>
+<tr class="even">
+<td align="left">5</td>
+<td align="right">5</td>
+<td align="right">75</td>
+<td align="left">F</td>
+</tr>
+<tr class="odd">
+<td align="left">7</td>
+<td align="right">7</td>
+<td align="right">59</td>
+<td align="left">F</td>
+</tr>
+<tr class="even">
+<td align="left">9</td>
+<td align="right">9</td>
+<td align="right">28</td>
+<td align="left">M</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(screened_data<span class="sc">$</span>data<span class="sc">$</span>diagnosis, <span class="at">caption =</span> <span class="st">&quot;Filtered Diagnoses&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Filtered Diagnoses</caption>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">pid</th>
+<th align="right">vid</th>
+<th align="right">dx_day</th>
+<th align="left">icd</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="right">101</td>
+<td align="right">1</td>
+<td align="left">E11</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="right">1</td>
+<td align="right">102</td>
+<td align="right">30</td>
+<td align="left">I10</td>
+</tr>
+<tr class="odd">
+<td align="left">4</td>
+<td align="right">2</td>
+<td align="right">104</td>
+<td align="right">45</td>
+<td align="left">E11</td>
+</tr>
+<tr class="even">
+<td align="left">5</td>
+<td align="right">3</td>
+<td align="right">105</td>
+<td align="right">10</td>
+<td align="left">E11</td>
+</tr>
+<tr class="odd">
+<td align="left">7</td>
+<td align="right">5</td>
+<td align="right">108</td>
+<td align="right">20</td>
+<td align="left">E11</td>
+</tr>
+<tr class="even">
+<td align="left">9</td>
+<td align="right">7</td>
+<td align="right">110</td>
+<td align="right">35</td>
+<td align="left">E11</td>
+</tr>
+<tr class="odd">
+<td align="left">11</td>
+<td align="right">9</td>
+<td align="right">112</td>
+<td align="right">50</td>
+<td align="left">E11</td>
+</tr>
+<tr class="even">
+<td align="left">13</td>
+<td align="right">11</td>
+<td align="right">114</td>
+<td align="right">65</td>
+<td align="left">E11</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(screened_data<span class="sc">$</span>data<span class="sc">$</span>lab, <span class="at">caption =</span> <span class="st">&quot;Filtered Labs&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Filtered Labs</caption>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">pid</th>
+<th align="right">vid</th>
+<th align="right">lab_day</th>
+<th align="right">HbA1c</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="right">101</td>
+<td align="right">1</td>
+<td align="right">8.5</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="right">1</td>
+<td align="right">102</td>
+<td align="right">30</td>
+<td align="right">7.2</td>
+</tr>
+<tr class="odd">
+<td align="left">4</td>
+<td align="right">2</td>
+<td align="right">104</td>
+<td align="right">45</td>
+<td align="right">7.8</td>
+</tr>
+<tr class="even">
+<td align="left">5</td>
+<td align="right">3</td>
+<td align="right">105</td>
+<td align="right">10</td>
+<td align="right">8.0</td>
+</tr>
+<tr class="odd">
+<td align="left">6</td>
+<td align="right">3</td>
+<td align="right">106</td>
+<td align="right">60</td>
+<td align="right">6.9</td>
+</tr>
+<tr class="even">
+<td align="left">8</td>
+<td align="right">5</td>
+<td align="right">108</td>
+<td align="right">20</td>
+<td align="right">8.2</td>
+</tr>
+<tr class="odd">
+<td align="left">10</td>
+<td align="right">7</td>
+<td align="right">110</td>
+<td align="right">35</td>
+<td align="right">9.5</td>
+</tr>
+<tr class="even">
+<td align="left">12</td>
+<td align="right">9</td>
+<td align="right">112</td>
+<td align="right">50</td>
+<td align="right">8.1</td>
+</tr>
+<tr class="odd">
+<td align="left">14</td>
+<td align="right">11</td>
+<td align="right">114</td>
+<td align="right">65</td>
+<td align="right">8.8</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="joined-output" class="section level3">
+<h3>Joined Output</h3>
+<p>Alternatively, get a single joined data frame:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a>joined_result <span class="ot">&lt;-</span> <span class="fu">screen_data_list</span>(</span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a>  <span class="at">data_list =</span> <span class="fu">list</span>(</span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a>    <span class="at">patient =</span> patient, <span class="at">admission =</span> admission,</span>
+<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a>    <span class="at">diagnosis =</span> diagnosis, <span class="at">lab =</span> lab</span>
+<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a>  ),</span>
+<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a>  <span class="at">entry_expr =</span> <span class="fu">any</span>(icd <span class="sc">==</span> <span class="st">&quot;E11&quot;</span>),</span>
+<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a>  <span class="at">entry_level =</span> <span class="st">&quot;patient_id&quot;</span>,</span>
+<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a>  <span class="at">anchor_expr =</span> <span class="fu">any</span>(icd <span class="sc">==</span> <span class="st">&quot;E11&quot;</span>),</span>
+<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a>  <span class="at">anchor_level =</span> <span class="st">&quot;date&quot;</span>,</span>
+<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a>  <span class="at">anchor_window =</span> <span class="st">&quot;from_first_anchor&quot;</span>,</span>
+<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a>  <span class="at">patient_id_map =</span> <span class="st">&quot;pid&quot;</span>,</span>
+<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a>  <span class="at">visit_id_map =</span> <span class="fu">c</span>(<span class="at">admission =</span> <span class="st">&quot;vid&quot;</span>, <span class="at">diagnosis =</span> <span class="st">&quot;vid&quot;</span>, <span class="at">lab =</span> <span class="st">&quot;vid&quot;</span>),</span>
+<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a>  <span class="at">date_map =</span> <span class="fu">c</span>(<span class="at">admission =</span> <span class="st">&quot;admit_day&quot;</span>, <span class="at">diagnosis =</span> <span class="st">&quot;dx_day&quot;</span>, <span class="at">lab =</span> <span class="st">&quot;lab_day&quot;</span>),</span>
+<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a>  <span class="at">output =</span> <span class="st">&quot;joined&quot;</span></span>
+<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a>)</span>
+<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a></span>
+<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Joined data:&quot;</span>, <span class="fu">nrow</span>(joined_result), <span class="st">&quot;rows,&quot;</span>, <span class="fu">ncol</span>(joined_result), <span class="st">&quot;columns</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a><span class="co">#&gt; Joined data: 9 rows, 7 columns</span></span>
+<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(joined_result), <span class="at">caption =</span> <span class="st">&quot;Joined Output&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Joined Output</caption>
+<thead>
+<tr class="header">
+<th align="right">patient_id</th>
+<th align="right">age</th>
+<th align="left">gender</th>
+<th align="right">visit_id</th>
+<th align="right">date</th>
+<th align="left">icd</th>
+<th align="right">HbA1c</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">51</td>
+<td align="left">M</td>
+<td align="right">101</td>
+<td align="right">1</td>
+<td align="left">E11</td>
+<td align="right">8.5</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">51</td>
+<td align="left">M</td>
+<td align="right">102</td>
+<td align="right">30</td>
+<td align="left">I10</td>
+<td align="right">7.2</td>
+</tr>
+<tr class="odd">
+<td align="right">2</td>
+<td align="right">72</td>
+<td align="left">M</td>
+<td align="right">104</td>
+<td align="right">45</td>
+<td align="left">E11</td>
+<td align="right">7.8</td>
+</tr>
+<tr class="even">
+<td align="right">3</td>
+<td align="right">38</td>
+<td align="left">M</td>
+<td align="right">105</td>
+<td align="right">10</td>
+<td align="left">E11</td>
+<td align="right">8.0</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">38</td>
+<td align="left">M</td>
+<td align="right">106</td>
+<td align="right">60</td>
+<td align="left">NA</td>
+<td align="right">6.9</td>
+</tr>
+<tr class="even">
+<td align="right">5</td>
+<td align="right">75</td>
+<td align="left">F</td>
+<td align="right">108</td>
+<td align="right">20</td>
+<td align="left">E11</td>
+<td align="right">8.2</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="summary" class="section level2">
+<h2>Summary</h2>
+<table>
+<colgroup>
+<col width="32%" />
+<col width="67%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Clinical Application</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>exclusion_count()</code></td>
+<td>CONSORT-style cohort flow documentation</td>
+</tr>
+<tr class="even">
+<td><code>screen_data_list()</code></td>
+<td>Multi-table cohort screening with audit trails</td>
+</tr>
+<tr class="odd">
+<td><code>merge_by_substring()</code></td>
+<td>Substring matching for diagnosis/procedure coding</td>
+</tr>
+<tr class="even">
+<td><code>merge_by_range()</code></td>
+<td>Time-window matching for longitudinal data</td>
+</tr>
+<tr class="odd">
+<td><code>to_wide()</code></td>
+<td>Long-to-wide format conversion</td>
+</tr>
+<tr class="even">
+<td><code>split_multichoice()</code> /
+<code>combine_multichoice()</code></td>
+<td>Survey and symptom data processing</td>
+</tr>
+<tr class="odd">
+<td>Utility functions</td>
+<td>String standardization, list operations, NA filling</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
 Package: clinpubr
 Title: Clinical Publication
-Version: 1.3.0
+Version: 1.4.0
 Authors@R: 
     c(person("Yue", "Niu", email = "niuyuesam@163.com", role = c("aut", "cre", "cph"),
              comment = c(ORCID = "0000-0001-6843-3548")),
@@ -25,15 +25,18 @@ Collate: 'answer_check.R' 'baseline_table.R' 'calculate_index.R'
         'multichoice.R' 'predictor_effect_plot.R' 'rcs_plot.R'
         'regressions.R' 'subgroup_forest.R' 'subject_standardize.R'
         'time_roc.R' 'to_date.R' 'unit_standardize.R'
-Imports: broom, car, DescTools, dplyr, fBasics, forestploter, ggplot2,
-        Hmisc, rlang, rms, stringi, stringr, survival, survminer, tidyr
-Suggests: caret, dcurves, dtplyr, geepack, pROC, ResourceSelection,
-        rstatix, tableone, testthat (>= 3.0.0), timeROC, vdiffr, withr
+Imports: broom, car, data.table, DescTools, dplyr, fBasics,
+        forestploter, ggplot2, Hmisc, rlang, rms, stringi, stringr,
+        survival, survminer, tidyr
+Suggests: caret, dcurves, dtplyr, geepack, knitr, pROC,
+        ResourceSelection, rmarkdown, rstatix, tableone, testthat (>=
+        3.0.0), timeROC, vdiffr, withr
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2026-03-07 01:28:18 UTC; niuyu
+Packaged: 2026-05-24 08:33:50 UTC; niuyu
 Author: Yue Niu [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0001-6843-3548>),
   Keyun Wang [aut]
 Repository: CRAN
-Date/Publication: 2026-03-07 07:00:07 UTC
+Date/Publication: 2026-05-24 09:00:30 UTC

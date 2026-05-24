@@ -78,8 +78,7 @@ data_overview <- function(df, outlier_method = "iqr", outlier_threshold = NULL,
       median = sapply(df[, variable_types$numeric], function(x) round(median(x, na.rm = TRUE), 2)),
       min = sapply(df[, variable_types$numeric], function(x) round(min(x, na.rm = TRUE), 2)),
       max = sapply(df[, variable_types$numeric], function(x) round(max(x, na.rm = TRUE), 2)),
-      sd = sapply(df[, variable_types$numeric], function(x) round(sd(x, na.rm = TRUE), 2)),
-      stringsAsFactors = FALSE
+      sd = sapply(df[, variable_types$numeric], function(x) round(sd(x, na.rm = TRUE), 2))
     )
     summary_stats$numeric <- numeric_summary
   }
@@ -103,8 +102,7 @@ data_overview <- function(df, outlier_method = "iqr", outlier_threshold = NULL,
       top_pct = sapply(df[, variable_types$character], function(x) {
         tab <- table(x[!is.na(x)])
         if (length(tab) > 0) round(max(tab) / sum(tab) * 100, 2) else 0
-      }),
-      stringsAsFactors = FALSE
+      })
     )
     summary_stats$character <- character_summary
   }
@@ -117,8 +115,7 @@ data_overview <- function(df, outlier_method = "iqr", outlier_threshold = NULL,
       missing = sapply(df[, variable_types$logical], function(x) sum(is.na(x))),
       missing_pct = sapply(df[, variable_types$logical], function(x) round(mean(is.na(x)) * 100, 2)),
       true_pct = sapply(df[, variable_types$logical], function(x) round(mean(x, na.rm = TRUE) * 100, 2)),
-      false_pct = sapply(df[, variable_types$logical], function(x) round((1 - mean(x, na.rm = TRUE)) * 100, 2)),
-      stringsAsFactors = FALSE
+      false_pct = sapply(df[, variable_types$logical], function(x) round((1 - mean(x, na.rm = TRUE)) * 100, 2))
     )
     summary_stats$logical <- logical_summary
   }
@@ -132,6 +129,11 @@ data_overview <- function(df, outlier_method = "iqr", outlier_threshold = NULL,
   # Check for numeric variables stored as characters
   numeric_as_char <- list()
   for (var in variable_types$character) {
+    if (is.factor(df[[var]])) {
+      # Skip factor variables
+      next
+    }
+    
     # Try to convert to numeric
     x <- df[[var]]
     x_no_na <- x[!is.na(x)]
