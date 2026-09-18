@@ -1,6 +1,6 @@
 Package: clinpubr
 Title: Clinical Publication
-Version: 1.4.1
+Version: 1.4.2
 Authors@R: 
     c(person("Yue", "Niu", email = "niuyuesam@163.com", role = c("aut", "cre", "cph"),
              comment = c(ORCID = "0000-0001-6843-3548")),
@@ -26,9 +26,9 @@ Collate: 'RcppExports.R' 'answer_check.R' 'baseline_table.R'
         'subgroup_forest.R' 'subject_standardize.R' 'time_roc.R'
         'to_date.R' 'unit_standardize.R'
 LinkingTo: Rcpp
-Imports: Rcpp, broom, car, data.table, DescTools, dplyr, fBasics,
-        forestploter, ggplot2, Hmisc, rlang, rms, stringi, stringr,
-        survival, survminer, tidyr
+Imports: Rcpp, broom, car, data.table, DescTools, dplyr (>= 1.1.0),
+        fBasics, forestploter, ggplot2 (>= 3.5.0), Hmisc, rlang, rms,
+        stringi, stringr, survival, survminer, tidyr
 Suggests: caret, dcurves, dtplyr, geepack, knitr, pROC,
         ResourceSelection, rmarkdown, rstatix, tableone, testthat (>=
         3.0.0), timeROC, vdiffr, withr
@@ -36,9 +36,9 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 NeedsCompilation: yes
-Packaged: 2026-07-13 08:55:18 UTC; niuyu
+Packaged: 2026-09-18 07:44:09 UTC; niuyu
 Author: Yue Niu [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0001-6843-3548>),
   Keyun Wang [aut]
 Repository: CRAN
-Date/Publication: 2026-07-13 10:10:02 UTC
+Date/Publication: 2026-09-18 08:30:02 UTC

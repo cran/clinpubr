@@ -3,12 +3,14 @@
 #' @param x A numeric vector to test for normality.
 #' @param alpha The significance level for normality tests. Default is 0.05.
 #' @param all_positive A logical value indicating whether all values are non-negative. If TRUE and
-#'   standard deviation is less than mean, the variable is considered non-normal (likely right-skewed).
+#'   standard deviation is greater than mean (coefficient of variation > 1), the variable is
+#'   considered non-normal (likely strongly right-skewed).
 #' @returns A logical value indicating whether the variable is normal (TRUE) or non-normal (FALSE).
 #' @note This function performs Shapiro-Wilk, Lilliefors, Anderson-Darling, Jarque-Bera, and
-#'   Shapiro-Francia tests. If at least two of these tests indicate that the variable is nonnormal
-#'   (p < alpha), then it is considered nonnormal. For positive variables, if SD < mean, it's also
-#'   considered non-normal as it suggests right skewness.
+#' Shapiro-Francia tests. The variable is considered nonnormal if a strict majority of the
+#' successful tests (with at least two tests) indicate that it is nonnormal (p < alpha); tests that
+#' fail do not count. For positive variables, if SD > mean, it's also considered non-normal as it
+#' suggests strong right skewness.
 #' @export
 #' @examples
 #' # Test normal data
@@ -61,12 +63,14 @@ test_normality <- function(x, alpha = 0.05, all_positive = NULL) {
     )
   }
 
-  # Determine if variable is normal
-  # Consider non-normal if:
-  # 1. For positive variables: SD < mean (indicating right skewness)
-  # 2. At least two normality tests reject null hypothesis (p < alpha)
-  is_nonnormal <- (all_positive && (sd(x_scaled, na.rm = TRUE) < mean(x_scaled, na.rm = TRUE))) ||
-    (sum(ps < alpha, na.rm = TRUE) >= sum(!is.na(ps)) - 2)
+  # Determine if variable is non-normal if:
+  # 1. For positive variables: SD > mean on the raw scale (CV > 1, indicating strong right skewness)
+  # 2. A strict majority of the successful normality tests reject (p < alpha), with at least two
+  #    rejections. Tests that fail (NA) do not lower the bar.
+  n_valid <- sum(!is.na(ps))
+  n_reject <- sum(ps < alpha, na.rm = TRUE)
+  is_nonnormal <- (all_positive && (sd(x_clean, na.rm = TRUE) > mean(x_clean, na.rm = TRUE))) ||
+    (n_reject >= max(2, floor(n_valid / 2) + 1))
 
   return(!is_nonnormal)
 }
@@ -92,8 +96,9 @@ test_normality <- function(x, alpha = 0.05, all_positive = NULL) {
 #'   \item{strata}{A character vector of the strata variable.}
 #' @note This function performs normality tests on the variables in the data frame and determines
 #'   whether they are normal. This is done by performing Shapiro-Wilk, Lilliefors, Anderson-Darling,
-#'   Jarque-Bera, and Shapiro-Francia tests. If at least two of these tests indicate that the variable
-#'   is nonnormal, then it is considered nonnormal. To alleviate the problem that normality tests become
+#'   Jarque-Bera, and Shapiro-Francia tests. If a strict majority of the successful tests (with at
+#'   least two) indicate that the variable is nonnormal, then it is considered nonnormal.
+#'   To alleviate the problem that normality tests become
 #'   too sensitive when sample size gets larger, the alpha level is determined by an experience formula
 #'   that decrease with sample size.
 #' @note This function also marks the factor variables that require fisher exact tests if any cell haves
@@ -267,7 +272,7 @@ baseline_table <- function(data, var_types = NULL, strata = NULL, vars = NULL, f
   if (is.null(nonnormal_vars) && !is.null(var_types)) nonnormal_vars <- var_types$nonnormal_vars
   if (is.null(vars)) vars <- setdiff(colnames(data), strata)
   if (!is.null(var_types$omit_vars)) vars <- setdiff(vars, var_types$omit_vars)
-  if (is.null(seed)) set.seed(seed)
+  if (!is.null(seed)) set.seed(seed)
   if (is.null(filename)) filename <- paste0("baseline_by_", strata, ".csv")
   if (!endsWith(filename, ".csv")) stop("please save as `.csv` file")
   factor_vars <- union(factor_vars, exact_vars)
@@ -358,9 +363,10 @@ baseline_table <- function(data, var_types = NULL, strata = NULL, vars = NULL, f
       }
       p_values_wide <- as.data.frame(pivot_wider(p_values_long, names_from = comparison, values_from = p.adj))
       if (nrow(p_values_wide) == 0) {
-        pairwise_list[[var]] <- setNames(
-          as.list(rep(NA, length(levels(g)) * (length(levels(g)) - 1) / 2)),
-          names(p_values_wide)
+        pair_levels <- utils::combn(levels(g), 2)
+        pair_names <- paste(pair_levels[1, ], pair_levels[2, ], sep = "_")
+        pairwise_list[[var]] <- as.data.frame(
+          setNames(as.list(rep(NA_real_, length(pair_names))), pair_names)
         )
       } else {
         pairwise_list[[var]] <- p_values_wide
