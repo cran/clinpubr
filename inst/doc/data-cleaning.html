@@ -371,97 +371,122 @@ mg/dL vs mmol/L) can cause false outlier flags.</p>
 <h2>Creating Realistic Messy Lab Data</h2>
 <p>Let’s create a sample laboratory dataset mimicking real-world EHR
 data with common quality issues. This dataset will be used throughout
-the vignette.</p>
+the vignette. Each patient contributes 1–4 visits, and all tests are
+measured on the same date within a visit, so that the wide-format cohort
+remains analyzable after reshaping.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">100</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>n_patients <span class="ot">&lt;-</span> <span class="dv">60</span></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Patient IDs</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>patient_ids <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;P&quot;</span>, <span class="fu">sprintf</span>(<span class="st">&quot;%03d&quot;</span>, <span class="dv">1</span><span class="sc">:</span>n))</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co"># Glucose: mix of mg/dL and mmol/L (1 mmol/L = 18 mg/dL)</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co"># Also include some outliers and missing values</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>glucose_vals <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">35</span>, <span class="at">mean =</span> <span class="dv">100</span>, <span class="at">sd =</span> <span class="dv">15</span>), <span class="co"># mg/dL normal range</span></span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">30</span>, <span class="at">mean =</span> <span class="fl">5.5</span>, <span class="at">sd =</span> <span class="fl">0.8</span>), <span class="co"># mmol/L normal range</span></span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">10</span>, <span class="at">mean =</span> <span class="dv">200</span>, <span class="at">sd =</span> <span class="dv">20</span>), <span class="co"># mg/dL high (outliers)</span></span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">10</span>, <span class="at">mean =</span> <span class="dv">15</span>, <span class="at">sd =</span> <span class="dv">2</span>), <span class="co"># mmol/L high (outliers)</span></span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="dv">10</span>), <span class="co"># missing values</span></span>
-<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="dv">999</span>, <span class="dv">888</span>, <span class="dv">0</span>, <span class="sc">-</span><span class="dv">50</span>, <span class="dv">500</span> <span class="co"># erroneous values</span></span>
-<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>)</span>
-<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>glucose_vals <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">sample</span>(glucose_vals, n), <span class="dv">1</span>)</span>
-<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a></span>
-<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>glucose_units <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;mg/dL&quot;</span>, <span class="st">&quot;mmol/L&quot;</span>, <span class="cn">NA</span>), n, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.4</span>, <span class="fl">0.1</span>))</span>
-<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a></span>
-<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co"># Creatinine: mix of mg/dL and umol/L (1 mg/dL = 88.4 umol/L)</span></span>
-<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>creatinine_vals <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">35</span>, <span class="at">mean =</span> <span class="fl">1.0</span>, <span class="at">sd =</span> <span class="fl">0.2</span>), <span class="co"># mg/dL normal range</span></span>
-<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">30</span>, <span class="at">mean =</span> <span class="dv">88</span>, <span class="at">sd =</span> <span class="dv">15</span>), <span class="co"># umol/L normal range</span></span>
-<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">10</span>, <span class="at">mean =</span> <span class="fl">3.0</span>, <span class="at">sd =</span> <span class="fl">0.5</span>), <span class="co"># mg/dL high (outliers)</span></span>
-<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">10</span>, <span class="at">mean =</span> <span class="dv">265</span>, <span class="at">sd =</span> <span class="dv">44</span>), <span class="co"># umol/L high (outliers)</span></span>
-<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>  <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="dv">10</span>), <span class="co"># missing values</span></span>
-<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>  <span class="dv">999</span>, <span class="dv">0</span>, <span class="sc">-</span><span class="dv">10</span>, <span class="dv">1000</span>, <span class="fl">0.001</span> <span class="co"># erroneous values</span></span>
-<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>)</span>
-<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>creatinine_vals <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">sample</span>(creatinine_vals, n), <span class="dv">2</span>)</span>
-<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a></span>
-<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>creatinine_units <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;mg/dL&quot;</span>, <span class="st">&quot;umol/L&quot;</span>, <span class="cn">NA</span>), n, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.4</span>, <span class="fl">0.1</span>))</span>
-<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a></span>
-<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co"># Cholesterol: mix of mg/dL and mmol/L (1 mmol/L = 38.67 mg/dL)</span></span>
-<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a>cholesterol_vals <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">35</span>, <span class="at">mean =</span> <span class="dv">180</span>, <span class="at">sd =</span> <span class="dv">30</span>), <span class="co"># mg/dL normal range</span></span>
-<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">30</span>, <span class="at">mean =</span> <span class="fl">4.5</span>, <span class="at">sd =</span> <span class="fl">0.8</span>), <span class="co"># mmol/L normal range</span></span>
-<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">10</span>, <span class="at">mean =</span> <span class="dv">350</span>, <span class="at">sd =</span> <span class="dv">40</span>), <span class="co"># mg/dL high (outliers)</span></span>
-<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">10</span>, <span class="at">mean =</span> <span class="dv">9</span>, <span class="at">sd =</span> <span class="dv">1</span>), <span class="co"># mmol/L high (outliers)</span></span>
-<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a>  <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="dv">10</span>), <span class="co"># missing values</span></span>
-<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a>  <span class="dv">888</span>, <span class="dv">999</span>, <span class="dv">50</span>, <span class="dv">600</span>, <span class="dv">0</span> <span class="co"># erroneous values</span></span>
-<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a>)</span>
-<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a>cholesterol_vals <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">sample</span>(cholesterol_vals, n), <span class="dv">2</span>)</span>
-<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a></span>
-<span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a>cholesterol_units <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;mg/dL&quot;</span>, <span class="st">&quot;mmol/L&quot;</span>, <span class="cn">NA</span>), n, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.4</span>, <span class="fl">0.1</span>))</span>
-<span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a></span>
-<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a><span class="co"># Test dates with various formats and impossible dates</span></span>
-<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a>test_date_vals <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(</span>
-<span id="cb2-49"><a href="#cb2-49" tabindex="-1"></a>  <span class="fu">format</span>(<span class="fu">Sys.Date</span>() <span class="sc">-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">365</span>, <span class="dv">60</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>), <span class="st">&quot;%Y-%m-%d&quot;</span>), <span class="co"># ISO format</span></span>
-<span id="cb2-50"><a href="#cb2-50" tabindex="-1"></a>  <span class="fu">format</span>(<span class="fu">Sys.Date</span>() <span class="sc">-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">365</span>, <span class="dv">30</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>), <span class="st">&quot;%Y/%m/%d&quot;</span>), <span class="co"># Slash format</span></span>
-<span id="cb2-51"><a href="#cb2-51" tabindex="-1"></a>  <span class="st">&quot;1900-01-01&quot;</span>, <span class="st">&quot;2030-12-31&quot;</span>, <span class="st">&quot;N/A&quot;</span>, <span class="st">&quot;&quot;</span>, <span class="st">&quot;unknown&quot;</span>, <span class="st">&quot;pending&quot;</span>, <span class="co"># Invalid dates</span></span>
-<span id="cb2-52"><a href="#cb2-52" tabindex="-1"></a>  <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="dv">10</span>)</span>
-<span id="cb2-53"><a href="#cb2-53" tabindex="-1"></a>), n <span class="sc">*</span> <span class="dv">3</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-54"><a href="#cb2-54" tabindex="-1"></a></span>
-<span id="cb2-55"><a href="#cb2-55" tabindex="-1"></a><span class="co"># Create long-format lab data with messy values</span></span>
-<span id="cb2-56"><a href="#cb2-56" tabindex="-1"></a>lab_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb2-57"><a href="#cb2-57" tabindex="-1"></a>  <span class="at">patient_id =</span> <span class="fu">rep</span>(patient_ids, <span class="dv">3</span>),</span>
-<span id="cb2-58"><a href="#cb2-58" tabindex="-1"></a>  <span class="at">test =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;Glucose&quot;</span>, <span class="st">&quot;Creatinine&quot;</span>, <span class="st">&quot;Cholesterol&quot;</span>), <span class="at">each =</span> n),</span>
-<span id="cb2-59"><a href="#cb2-59" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">c</span>(glucose_vals, creatinine_vals, cholesterol_vals),</span>
-<span id="cb2-60"><a href="#cb2-60" tabindex="-1"></a>  <span class="at">unit =</span> <span class="fu">c</span>(glucose_units, creatinine_units, cholesterol_units),</span>
-<span id="cb2-61"><a href="#cb2-61" tabindex="-1"></a>  <span class="at">test_date =</span> test_date_vals</span>
-<span id="cb2-62"><a href="#cb2-62" tabindex="-1"></a>)</span>
-<span id="cb2-63"><a href="#cb2-63" tabindex="-1"></a></span>
-<span id="cb2-64"><a href="#cb2-64" tabindex="-1"></a><span class="co"># Add messy string values that need cleaning</span></span>
-<span id="cb2-65"><a href="#cb2-65" tabindex="-1"></a><span class="co"># Glucose with text annotations and European decimal commas</span></span>
-<span id="cb2-66"><a href="#cb2-66" tabindex="-1"></a>messy_glucose_idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">which</span>(lab_data<span class="sc">$</span>test <span class="sc">==</span> <span class="st">&quot;Glucose&quot;</span>), <span class="dv">15</span>)</span>
-<span id="cb2-67"><a href="#cb2-67" tabindex="-1"></a>lab_data<span class="sc">$</span>value[messy_glucose_idx] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(</span>
-<span id="cb2-68"><a href="#cb2-68" tabindex="-1"></a>  <span class="st">&quot;&lt;40&quot;</span>, <span class="st">&quot;&gt;500&quot;</span>, <span class="st">&quot;5.2&quot;</span>, <span class="st">&quot;6.8&quot;</span>, <span class="st">&quot;120 mg/dL&quot;</span>, <span class="st">&quot;89 mmol/L&quot;</span>,</span>
-<span id="cb2-69"><a href="#cb2-69" tabindex="-1"></a>  <span class="st">&quot;5.2 (fasting)&quot;</span>, <span class="st">&quot;180 (post-meal)&quot;</span>, <span class="st">&quot;N/A&quot;</span>, <span class="st">&quot;pending&quot;</span>,</span>
-<span id="cb2-70"><a href="#cb2-70" tabindex="-1"></a>  <span class="st">&quot;6..5&quot;</span>, <span class="st">&quot;7..2&quot;</span>, <span class="st">&quot;8.5.1&quot;</span>, <span class="st">&quot;normal range&quot;</span>, <span class="st">&quot;see comment&quot;</span></span>
-<span id="cb2-71"><a href="#cb2-71" tabindex="-1"></a>), <span class="fu">length</span>(messy_glucose_idx), <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-72"><a href="#cb2-72" tabindex="-1"></a></span>
-<span id="cb2-73"><a href="#cb2-73" tabindex="-1"></a><span class="co"># Creatinine with text annotations</span></span>
-<span id="cb2-74"><a href="#cb2-74" tabindex="-1"></a>messy_creatinine_idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">which</span>(lab_data<span class="sc">$</span>test <span class="sc">==</span> <span class="st">&quot;Creatinine&quot;</span>), <span class="dv">12</span>)</span>
-<span id="cb2-75"><a href="#cb2-75" tabindex="-1"></a>lab_data<span class="sc">$</span>value[messy_creatinine_idx] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(</span>
-<span id="cb2-76"><a href="#cb2-76" tabindex="-1"></a>  <span class="st">&quot;&lt;0.5&quot;</span>, <span class="st">&quot;&gt;5.0&quot;</span>, <span class="st">&quot;1.1&quot;</span>, <span class="st">&quot;0.9&quot;</span>, <span class="st">&quot;1.2 mg/dL&quot;</span>, <span class="st">&quot;110 umol/L&quot;</span>,</span>
-<span id="cb2-77"><a href="#cb2-77" tabindex="-1"></a>  <span class="st">&quot;1.5 (dialysis)&quot;</span>, <span class="st">&quot;2.8 (critical)&quot;</span>, <span class="st">&quot;N/A&quot;</span>, <span class="st">&quot; hemolyzed&quot;</span>,</span>
-<span id="cb2-78"><a href="#cb2-78" tabindex="-1"></a>  <span class="st">&quot;1.3 &quot;</span>, <span class="st">&quot; 1.4&quot;</span>, <span class="st">&quot;(1.2)&quot;</span>, <span class="st">&quot;1.0*&quot;</span>, <span class="st">&quot;see note&quot;</span></span>
-<span id="cb2-79"><a href="#cb2-79" tabindex="-1"></a>), <span class="fu">length</span>(messy_creatinine_idx), <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-80"><a href="#cb2-80" tabindex="-1"></a></span>
-<span id="cb2-81"><a href="#cb2-81" tabindex="-1"></a><span class="co"># Cholesterol with text annotations</span></span>
-<span id="cb2-82"><a href="#cb2-82" tabindex="-1"></a>messy_cholesterol_idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">which</span>(lab_data<span class="sc">$</span>test <span class="sc">==</span> <span class="st">&quot;Cholesterol&quot;</span>), <span class="dv">10</span>)</span>
-<span id="cb2-83"><a href="#cb2-83" tabindex="-1"></a>lab_data<span class="sc">$</span>value[messy_cholesterol_idx] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(</span>
-<span id="cb2-84"><a href="#cb2-84" tabindex="-1"></a>  <span class="st">&quot;&lt;100&quot;</span>, <span class="st">&quot;&gt;400&quot;</span>, <span class="st">&quot;4.5&quot;</span>, <span class="st">&quot;5.2&quot;</span>, <span class="st">&quot;200 mg/dL&quot;</span>, <span class="st">&quot;5.5 mmol/L&quot;</span>,</span>
-<span id="cb2-85"><a href="#cb2-85" tabindex="-1"></a>  <span class="st">&quot;180 (fasting)&quot;</span>, <span class="st">&quot;250 (borderline)&quot;</span>, <span class="st">&quot;N/A&quot;</span>, <span class="st">&quot;lipemic&quot;</span></span>
-<span id="cb2-86"><a href="#cb2-86" tabindex="-1"></a>), <span class="fu">length</span>(messy_cholesterol_idx), <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-87"><a href="#cb2-87" tabindex="-1"></a></span>
-<span id="cb2-88"><a href="#cb2-88" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(lab_data[<span class="fu">sample</span>(<span class="fu">nrow</span>(lab_data)), ], <span class="dv">10</span>),</span>
-<span id="cb2-89"><a href="#cb2-89" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">&quot;Original Messy Lab Data (10 random rows)&quot;</span></span>
-<span id="cb2-90"><a href="#cb2-90" tabindex="-1"></a>)</span></code></pre></div>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Patient IDs and number of visits per patient (longitudinal cohort)</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>visits_per_patient <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, n_patients, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.4</span>, <span class="fl">0.25</span>, <span class="fl">0.1</span>))</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>patient_ids <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">paste0</span>(<span class="st">&quot;P&quot;</span>, <span class="fu">sprintf</span>(<span class="st">&quot;%03d&quot;</span>, <span class="dv">1</span><span class="sc">:</span>n_patients)), visits_per_patient)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>n_visits <span class="ot">&lt;-</span> <span class="fu">length</span>(patient_ids)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co"># Helper: generate a mixture of clinically plausible values</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>make_vals <span class="ot">&lt;-</span> <span class="cf">function</span>(n, props, means, sds) {</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  grp <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">seq_along</span>(means), n, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> props)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="fu">round</span>(<span class="fu">rnorm</span>(n, means[grp], sds[grp]), <span class="dv">2</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>}</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co"># Glucose: mix of mg/dL and mmol/L (1 mmol/L = 18 mg/dL)</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>glucose_units <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;mg/dL&quot;</span>, <span class="st">&quot;mmol/L&quot;</span>, <span class="cn">NA</span>), n_visits,</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.6</span>, <span class="fl">0.3</span>, <span class="fl">0.1</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>)</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>glucose_vals <span class="ot">&lt;-</span> <span class="fu">make_vals</span>(</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  n_visits, <span class="fu">c</span>(<span class="fl">0.55</span>, <span class="fl">0.25</span>, <span class="fl">0.15</span>, <span class="fl">0.05</span>),</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  <span class="fu">c</span>(<span class="dv">100</span>, <span class="dv">150</span>, <span class="dv">230</span>, <span class="fl">5.7</span>), <span class="fu">c</span>(<span class="dv">12</span>, <span class="dv">18</span>, <span class="dv">30</span>, <span class="fl">0.9</span>) <span class="co"># mg/dL values</span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>)</span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>mmol_glu_idx <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(glucose_units) <span class="sc">&amp;</span> glucose_units <span class="sc">==</span> <span class="st">&quot;mmol/L&quot;</span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>glucose_vals[mmol_glu_idx] <span class="ot">&lt;-</span> <span class="fu">make_vals</span>(</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>  <span class="fu">sum</span>(mmol_glu_idx), <span class="fu">c</span>(<span class="fl">0.55</span>, <span class="fl">0.25</span>, <span class="fl">0.15</span>, <span class="fl">0.05</span>),</span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>  <span class="fu">c</span>(<span class="fl">5.6</span>, <span class="fl">8.3</span>, <span class="fl">12.8</span>, <span class="fl">0.32</span>), <span class="fu">c</span>(<span class="fl">0.7</span>, <span class="dv">1</span>, <span class="fl">1.7</span>, <span class="fl">0.05</span>) <span class="co"># mmol/L values</span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>)</span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co"># Creatinine: mix of mg/dL and umol/L (1 mg/dL = 88.4 umol/L)</span></span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>creatinine_units <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;mg/dL&quot;</span>, <span class="st">&quot;umol/L&quot;</span>, <span class="cn">NA</span>), n_visits,</span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>  <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.55</span>, <span class="fl">0.35</span>, <span class="fl">0.1</span>)</span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>)</span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a>creatinine_vals <span class="ot">&lt;-</span> <span class="fu">make_vals</span>(</span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a>  n_visits, <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.25</span>, <span class="fl">0.25</span>),</span>
+<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a>  <span class="fu">c</span>(<span class="fl">0.86</span>, <span class="fl">1.7</span>, <span class="fl">4.5</span>), <span class="fu">c</span>(<span class="fl">0.15</span>, <span class="fl">0.3</span>, <span class="fl">1.2</span>) <span class="co"># mg/dL values</span></span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a>)</span>
+<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a>umol_cre_idx <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(creatinine_units) <span class="sc">&amp;</span> creatinine_units <span class="sc">==</span> <span class="st">&quot;umol/L&quot;</span></span>
+<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a>creatinine_vals[umol_cre_idx] <span class="ot">&lt;-</span> <span class="fu">make_vals</span>(</span>
+<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a>  <span class="fu">sum</span>(umol_cre_idx), <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.25</span>, <span class="fl">0.25</span>),</span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a>  <span class="fu">c</span>(<span class="dv">76</span>, <span class="dv">150</span>, <span class="dv">400</span>), <span class="fu">c</span>(<span class="dv">13</span>, <span class="dv">27</span>, <span class="dv">110</span>) <span class="co"># umol/L values</span></span>
+<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a>)</span>
+<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a><span class="co"># Cholesterol: mix of mg/dL and mmol/L (1 mmol/L = 38.67 mg/dL)</span></span>
+<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a>cholesterol_units <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;mg/dL&quot;</span>, <span class="st">&quot;mmol/L&quot;</span>, <span class="cn">NA</span>), n_visits,</span>
+<span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a>  <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.6</span>, <span class="fl">0.3</span>, <span class="fl">0.1</span>)</span>
+<span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a>)</span>
+<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a>cholesterol_vals <span class="ot">&lt;-</span> <span class="fu">make_vals</span>(</span>
+<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a>  n_visits, <span class="fu">c</span>(<span class="fl">0.55</span>, <span class="fl">0.3</span>, <span class="fl">0.15</span>),</span>
+<span id="cb2-49"><a href="#cb2-49" tabindex="-1"></a>  <span class="fu">c</span>(<span class="dv">180</span>, <span class="dv">230</span>, <span class="dv">330</span>), <span class="fu">c</span>(<span class="dv">25</span>, <span class="dv">20</span>, <span class="dv">40</span>) <span class="co"># mg/dL values</span></span>
+<span id="cb2-50"><a href="#cb2-50" tabindex="-1"></a>)</span>
+<span id="cb2-51"><a href="#cb2-51" tabindex="-1"></a>mmol_chol_idx <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(cholesterol_units) <span class="sc">&amp;</span> cholesterol_units <span class="sc">==</span> <span class="st">&quot;mmol/L&quot;</span></span>
+<span id="cb2-52"><a href="#cb2-52" tabindex="-1"></a>cholesterol_vals[mmol_chol_idx] <span class="ot">&lt;-</span> <span class="fu">make_vals</span>(</span>
+<span id="cb2-53"><a href="#cb2-53" tabindex="-1"></a>  <span class="fu">sum</span>(mmol_chol_idx), <span class="fu">c</span>(<span class="fl">0.55</span>, <span class="fl">0.3</span>, <span class="fl">0.15</span>),</span>
+<span id="cb2-54"><a href="#cb2-54" tabindex="-1"></a>  <span class="fu">c</span>(<span class="fl">4.7</span>, <span class="dv">6</span>, <span class="fl">8.5</span>), <span class="fu">c</span>(<span class="fl">0.6</span>, <span class="fl">0.5</span>, <span class="dv">1</span>) <span class="co"># mmol/L values</span></span>
+<span id="cb2-55"><a href="#cb2-55" tabindex="-1"></a>)</span>
+<span id="cb2-56"><a href="#cb2-56" tabindex="-1"></a></span>
+<span id="cb2-57"><a href="#cb2-57" tabindex="-1"></a><span class="co"># A modest amount of missing values in each test</span></span>
+<span id="cb2-58"><a href="#cb2-58" tabindex="-1"></a>glucose_vals[<span class="fu">sample</span>(n_visits, <span class="fu">round</span>(n_visits <span class="sc">*</span> <span class="fl">0.08</span>))] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb2-59"><a href="#cb2-59" tabindex="-1"></a>creatinine_vals[<span class="fu">sample</span>(n_visits, <span class="fu">round</span>(n_visits <span class="sc">*</span> <span class="fl">0.08</span>))] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb2-60"><a href="#cb2-60" tabindex="-1"></a>cholesterol_vals[<span class="fu">sample</span>(n_visits, <span class="fu">round</span>(n_visits <span class="sc">*</span> <span class="fl">0.08</span>))] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb2-61"><a href="#cb2-61" tabindex="-1"></a></span>
+<span id="cb2-62"><a href="#cb2-62" tabindex="-1"></a><span class="co"># Test dates: one date per visit, with various formats and invalid entries</span></span>
+<span id="cb2-63"><a href="#cb2-63" tabindex="-1"></a>visit_dates <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">as.Date</span>(<span class="cn">NA</span>), n_visits)</span>
+<span id="cb2-64"><a href="#cb2-64" tabindex="-1"></a><span class="cf">for</span> (p <span class="cf">in</span> <span class="fu">seq_len</span>(n_patients)) {</span>
+<span id="cb2-65"><a href="#cb2-65" tabindex="-1"></a>  p_idx <span class="ot">&lt;-</span> <span class="fu">which</span>(patient_ids <span class="sc">==</span> <span class="fu">sprintf</span>(<span class="st">&quot;P%03d&quot;</span>, p))</span>
+<span id="cb2-66"><a href="#cb2-66" tabindex="-1"></a>  visit_dates[p_idx] <span class="ot">&lt;-</span> <span class="fu">Sys.Date</span>() <span class="sc">-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">365</span>, <span class="fu">length</span>(p_idx), <span class="at">replace =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-67"><a href="#cb2-67" tabindex="-1"></a>}</span>
+<span id="cb2-68"><a href="#cb2-68" tabindex="-1"></a>date_strings <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="fu">runif</span>(n_visits) <span class="sc">&lt;</span> <span class="fl">0.5</span>,</span>
+<span id="cb2-69"><a href="#cb2-69" tabindex="-1"></a>  <span class="fu">format</span>(visit_dates, <span class="st">&quot;%Y-%m-%d&quot;</span>), <span class="co"># ISO format</span></span>
+<span id="cb2-70"><a href="#cb2-70" tabindex="-1"></a>  <span class="fu">format</span>(visit_dates, <span class="st">&quot;%Y/%m/%d&quot;</span>) <span class="co"># Slash format</span></span>
+<span id="cb2-71"><a href="#cb2-71" tabindex="-1"></a>)</span>
+<span id="cb2-72"><a href="#cb2-72" tabindex="-1"></a>invalid_idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(n_visits, <span class="fu">round</span>(n_visits <span class="sc">*</span> <span class="fl">0.1</span>))</span>
+<span id="cb2-73"><a href="#cb2-73" tabindex="-1"></a>date_strings[invalid_idx] <span class="ot">&lt;-</span> <span class="fu">sample</span>(</span>
+<span id="cb2-74"><a href="#cb2-74" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;N/A&quot;</span>, <span class="st">&quot;unknown&quot;</span>, <span class="st">&quot;pending&quot;</span>, <span class="st">&quot;&quot;</span>, <span class="cn">NA_character_</span>),</span>
+<span id="cb2-75"><a href="#cb2-75" tabindex="-1"></a>  <span class="fu">length</span>(invalid_idx), <span class="at">replace =</span> <span class="cn">TRUE</span></span>
+<span id="cb2-76"><a href="#cb2-76" tabindex="-1"></a>)</span>
+<span id="cb2-77"><a href="#cb2-77" tabindex="-1"></a></span>
+<span id="cb2-78"><a href="#cb2-78" tabindex="-1"></a><span class="co"># Create long-format lab data: all tests are recorded at each visit</span></span>
+<span id="cb2-79"><a href="#cb2-79" tabindex="-1"></a>lab_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-80"><a href="#cb2-80" tabindex="-1"></a>  <span class="at">patient_id =</span> <span class="fu">rep</span>(patient_ids, <span class="at">each =</span> <span class="dv">3</span>),</span>
+<span id="cb2-81"><a href="#cb2-81" tabindex="-1"></a>  <span class="at">test =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;Glucose&quot;</span>, <span class="st">&quot;Creatinine&quot;</span>, <span class="st">&quot;Cholesterol&quot;</span>), <span class="at">times =</span> n_visits),</span>
+<span id="cb2-82"><a href="#cb2-82" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">as.character</span>(<span class="fu">c</span>(<span class="fu">rbind</span>(glucose_vals, creatinine_vals, cholesterol_vals))),</span>
+<span id="cb2-83"><a href="#cb2-83" tabindex="-1"></a>  <span class="at">unit =</span> <span class="fu">c</span>(<span class="fu">rbind</span>(glucose_units, creatinine_units, cholesterol_units)),</span>
+<span id="cb2-84"><a href="#cb2-84" tabindex="-1"></a>  <span class="at">test_date =</span> <span class="fu">rep</span>(date_strings, <span class="at">each =</span> <span class="dv">3</span>)</span>
+<span id="cb2-85"><a href="#cb2-85" tabindex="-1"></a>)</span>
+<span id="cb2-86"><a href="#cb2-86" tabindex="-1"></a></span>
+<span id="cb2-87"><a href="#cb2-87" tabindex="-1"></a><span class="co"># Add messy string values that need cleaning</span></span>
+<span id="cb2-88"><a href="#cb2-88" tabindex="-1"></a><span class="co"># Glucose with text annotations and European decimal commas</span></span>
+<span id="cb2-89"><a href="#cb2-89" tabindex="-1"></a>messy_glucose_idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">which</span>(lab_data<span class="sc">$</span>test <span class="sc">==</span> <span class="st">&quot;Glucose&quot;</span>), <span class="dv">15</span>)</span>
+<span id="cb2-90"><a href="#cb2-90" tabindex="-1"></a>lab_data<span class="sc">$</span>value[messy_glucose_idx] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(</span>
+<span id="cb2-91"><a href="#cb2-91" tabindex="-1"></a>  <span class="st">&quot;&lt;40&quot;</span>, <span class="st">&quot;&gt;500&quot;</span>, <span class="st">&quot;5.2&quot;</span>, <span class="st">&quot;6.8&quot;</span>, <span class="st">&quot;120 mg/dL&quot;</span>, <span class="st">&quot;89 mmol/L&quot;</span>,</span>
+<span id="cb2-92"><a href="#cb2-92" tabindex="-1"></a>  <span class="st">&quot;5.2 (fasting)&quot;</span>, <span class="st">&quot;180 (post-meal)&quot;</span>, <span class="st">&quot;N/A&quot;</span>, <span class="st">&quot;pending&quot;</span>,</span>
+<span id="cb2-93"><a href="#cb2-93" tabindex="-1"></a>  <span class="st">&quot;6..5&quot;</span>, <span class="st">&quot;7..2&quot;</span>, <span class="st">&quot;8.5.1&quot;</span>, <span class="st">&quot;normal range&quot;</span>, <span class="st">&quot;see comment&quot;</span></span>
+<span id="cb2-94"><a href="#cb2-94" tabindex="-1"></a>), <span class="fu">length</span>(messy_glucose_idx), <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-95"><a href="#cb2-95" tabindex="-1"></a></span>
+<span id="cb2-96"><a href="#cb2-96" tabindex="-1"></a><span class="co"># Creatinine with text annotations</span></span>
+<span id="cb2-97"><a href="#cb2-97" tabindex="-1"></a>messy_creatinine_idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">which</span>(lab_data<span class="sc">$</span>test <span class="sc">==</span> <span class="st">&quot;Creatinine&quot;</span>), <span class="dv">12</span>)</span>
+<span id="cb2-98"><a href="#cb2-98" tabindex="-1"></a>lab_data<span class="sc">$</span>value[messy_creatinine_idx] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(</span>
+<span id="cb2-99"><a href="#cb2-99" tabindex="-1"></a>  <span class="st">&quot;&lt;0.5&quot;</span>, <span class="st">&quot;&gt;5.0&quot;</span>, <span class="st">&quot;1.1&quot;</span>, <span class="st">&quot;0.9&quot;</span>, <span class="st">&quot;1.2 mg/dL&quot;</span>, <span class="st">&quot;110 umol/L&quot;</span>,</span>
+<span id="cb2-100"><a href="#cb2-100" tabindex="-1"></a>  <span class="st">&quot;1.5 (dialysis)&quot;</span>, <span class="st">&quot;2.8 (critical)&quot;</span>, <span class="st">&quot;N/A&quot;</span>, <span class="st">&quot; hemolyzed&quot;</span>,</span>
+<span id="cb2-101"><a href="#cb2-101" tabindex="-1"></a>  <span class="st">&quot;1.3 &quot;</span>, <span class="st">&quot; 1.4&quot;</span>, <span class="st">&quot;(1.2)&quot;</span>, <span class="st">&quot;1.0*&quot;</span>, <span class="st">&quot;see note&quot;</span></span>
+<span id="cb2-102"><a href="#cb2-102" tabindex="-1"></a>), <span class="fu">length</span>(messy_creatinine_idx), <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-103"><a href="#cb2-103" tabindex="-1"></a></span>
+<span id="cb2-104"><a href="#cb2-104" tabindex="-1"></a><span class="co"># Cholesterol with text annotations</span></span>
+<span id="cb2-105"><a href="#cb2-105" tabindex="-1"></a>messy_cholesterol_idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">which</span>(lab_data<span class="sc">$</span>test <span class="sc">==</span> <span class="st">&quot;Cholesterol&quot;</span>), <span class="dv">10</span>)</span>
+<span id="cb2-106"><a href="#cb2-106" tabindex="-1"></a>lab_data<span class="sc">$</span>value[messy_cholesterol_idx] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(</span>
+<span id="cb2-107"><a href="#cb2-107" tabindex="-1"></a>  <span class="st">&quot;&lt;100&quot;</span>, <span class="st">&quot;&gt;400&quot;</span>, <span class="st">&quot;4.5&quot;</span>, <span class="st">&quot;5.2&quot;</span>, <span class="st">&quot;200 mg/dL&quot;</span>, <span class="st">&quot;5.5 mmol/L&quot;</span>,</span>
+<span id="cb2-108"><a href="#cb2-108" tabindex="-1"></a>  <span class="st">&quot;180 (fasting)&quot;</span>, <span class="st">&quot;250 (borderline)&quot;</span>, <span class="st">&quot;N/A&quot;</span>, <span class="st">&quot;lipemic&quot;</span></span>
+<span id="cb2-109"><a href="#cb2-109" tabindex="-1"></a>), <span class="fu">length</span>(messy_cholesterol_idx), <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-110"><a href="#cb2-110" tabindex="-1"></a></span>
+<span id="cb2-111"><a href="#cb2-111" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(lab_data[<span class="fu">sample</span>(<span class="fu">nrow</span>(lab_data)), ], <span class="dv">10</span>),</span>
+<span id="cb2-112"><a href="#cb2-112" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">&quot;Original Messy Lab Data (10 random rows)&quot;</span></span>
+<span id="cb2-113"><a href="#cb2-113" tabindex="-1"></a>)</span></code></pre></div>
 <table>
 <caption>Original Messy Lab Data (10 random rows)</caption>
 <thead>
@@ -476,84 +501,84 @@ the vignette.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">267</td>
-<td align="left">P067</td>
+<td align="left">336</td>
+<td align="left">P050</td>
 <td align="left">Cholesterol</td>
-<td align="left">4.56</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-08-24</td>
-</tr>
-<tr class="even">
-<td align="left">81</td>
-<td align="left">P081</td>
-<td align="left">Glucose</td>
-<td align="left">5.4</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-02-19</td>
-</tr>
-<tr class="odd">
-<td align="left">260</td>
-<td align="left">P060</td>
-<td align="left">Cholesterol</td>
-<td align="left">227.31</td>
+<td align="left">&gt;400</td>
 <td align="left">mmol/L</td>
-<td align="left">2026/07/03</td>
+<td align="left">2025-11-26</td>
 </tr>
 <tr class="even">
-<td align="left">76</td>
-<td align="left">P076</td>
-<td align="left">Glucose</td>
-<td align="left">218.4</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-02-23</td>
-</tr>
-<tr class="odd">
-<td align="left">184</td>
-<td align="left">P084</td>
+<td align="left">143</td>
+<td align="left">P021</td>
 <td align="left">Creatinine</td>
-<td align="left">263.9</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-06-10</td>
-</tr>
-<tr class="even">
-<td align="left">14</td>
-<td align="left">P014</td>
-<td align="left">Glucose</td>
-<td align="left">190.2</td>
-<td align="left">mg/dL</td>
-<td align="left">2026/03/28</td>
-</tr>
-<tr class="odd">
-<td align="left">51</td>
-<td align="left">P051</td>
-<td align="left">Glucose</td>
-<td align="left">NA</td>
-<td align="left">mg/dL</td>
-<td align="left">2025/11/09</td>
-</tr>
-<tr class="even">
-<td align="left">155</td>
-<td align="left">P055</td>
-<td align="left">Creatinine</td>
-<td align="left">1.09</td>
+<td align="left">83</td>
 <td align="left">umol/L</td>
-<td align="left">2026-08-15</td>
+<td align="left">2026/04/17</td>
 </tr>
 <tr class="odd">
-<td align="left">75</td>
-<td align="left">P075</td>
+<td align="left">61</td>
+<td align="left">P010</td>
 <td align="left">Glucose</td>
-<td align="left">5.7</td>
-<td align="left">NA</td>
-<td align="left">2026-03-11</td>
+<td align="left">115.16</td>
+<td align="left">mg/dL</td>
+<td align="left">2026-08-08</td>
 </tr>
 <tr class="even">
-<td align="left">236</td>
-<td align="left">P036</td>
-<td align="left">Cholesterol</td>
-<td align="left">8.39</td>
+<td align="left">379</td>
+<td align="left">P057</td>
+<td align="left">Glucose</td>
+<td align="left">NA</td>
 <td align="left">mg/dL</td>
-<td align="left">2026/04/26</td>
+<td align="left">2026/07/02</td>
+</tr>
+<tr class="odd">
+<td align="left">117</td>
+<td align="left">P017</td>
+<td align="left">Cholesterol</td>
+<td align="left">183.67</td>
+<td align="left">mg/dL</td>
+<td align="left">2026/02/26</td>
+</tr>
+<tr class="even">
+<td align="left">152</td>
+<td align="left">P023</td>
+<td align="left">Creatinine</td>
+<td align="left">NA</td>
+<td align="left">umol/L</td>
+<td align="left">2026/01/02</td>
+</tr>
+<tr class="odd">
+<td align="left">387</td>
+<td align="left">P059</td>
+<td align="left">Cholesterol</td>
+<td align="left">173.19</td>
+<td align="left">mg/dL</td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">290</td>
+<td align="left">P043</td>
+<td align="left">Creatinine</td>
+<td align="left">2.8 (critical)</td>
+<td align="left">mg/dL</td>
+<td align="left">2026-09-07</td>
+</tr>
+<tr class="odd">
+<td align="left">299</td>
+<td align="left">P044</td>
+<td align="left">Creatinine</td>
+<td align="left">1.53</td>
+<td align="left">mg/dL</td>
+<td align="left">2026-07-23</td>
+</tr>
+<tr class="even">
+<td align="left">168</td>
+<td align="left">P024</td>
+<td align="left">Cholesterol</td>
+<td align="left">5.47</td>
+<td align="left">mmol/L</td>
+<td align="left">2025/12/20</td>
 </tr>
 </tbody>
 </table>
@@ -566,39 +591,33 @@ created above)</p>
 report of data quality issues:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data_overview</span>(lab_data)</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; === Data Overview Summary ===</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; Dataset: 300 rows, 5 columns</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; Dataset: 393 rows, 5 columns</span></span>
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; Variable Types:</span></span>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;   character : 5 variables</span></span>
 <span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; Found 4 potential quality issues:</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; Found 3 potential quality issues:</span></span>
 <span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;   numeric_as_character     : 1 cases</span></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;   missing_values           : 3 cases</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;   missing_values           : 2 cases</span></span>
 <span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; Recommendations:</span></span>
 <span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt;   - Consider converting these character variables to numeric: value</span></span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt;   - Variables with &lt; 50 % missing values: unit, value, test_date - consider imputation</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt;   - Variables with &lt; 50 % missing values: unit, value - consider imputation</span></span>
 <span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a></span>
 <span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="fu">print</span>(overview<span class="sc">$</span>variable_types)</span>
 <span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; $character</span></span>
 <span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; [1] &quot;patient_id&quot; &quot;test&quot;       &quot;value&quot;      &quot;unit&quot;       &quot;test_date&quot;</span></span>
 <span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="fu">print</span>(overview<span class="sc">$</span>summary_stats)</span>
 <span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; $character</span></span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt;              variable   n missing missing_pct unique   top_value top_freq</span></span>
-<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; patient_id patient_id 300       0        0.00    100        P001        3</span></span>
-<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; test             test 300       0        0.00      3 Cholesterol      100</span></span>
-<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; value           value 275      25        8.33    236           0        4</span></span>
-<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; unit             unit 268      32       10.67      3       mg/dL      159</span></span>
-<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; test_date   test_date 279      21        7.00     86  2025-12-26        9</span></span>
-<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt;            top_pct</span></span>
-<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; patient_id    1.00</span></span>
-<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; test         33.33</span></span>
-<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt; value         1.45</span></span>
-<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; unit         59.33</span></span>
-<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; test_date     3.23</span></span>
-<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="fu">print</span>(overview<span class="sc">$</span>quality_issues<span class="sc">$</span>missing_values)</span>
-<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt;      unit     value test_date </span></span>
-<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt;     10.67      8.33      7.00</span></span></code></pre></div>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt;     variable   n missing missing_pct unique      top_value top_freq top_pct</span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; 1 patient_id 393       0        0.00     60           P005       12    3.05</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; 2       test 393       0        0.00      3    Cholesterol      131   33.33</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; 3      value 365      28        7.12    334 2.8 (critical)        5    1.37</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 4       unit 358      35        8.91      3          mg/dL      224   62.57</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; 5  test_date 390       3        0.76    113            N/A       18    4.62</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="fu">print</span>(overview<span class="sc">$</span>quality_issues<span class="sc">$</span>missing_values)</span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt;  unit value </span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt;  8.91  7.12</span></span></code></pre></div>
 <p>Check for unit conflicts across different test types:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">unit_view</span>(lab_data, <span class="at">subject_col =</span> <span class="st">&quot;test&quot;</span>, <span class="at">value_col =</span> <span class="st">&quot;value&quot;</span>, <span class="at">unit_col =</span> <span class="st">&quot;unit&quot;</span>),</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">&quot;Unit Conflicts by Test Type&quot;</span></span>
@@ -606,16 +625,16 @@ report of data quality issues:</p>
 <table>
 <caption>Unit Conflicts by Test Type</caption>
 <colgroup>
-<col width="14%" />
-<col width="8%" />
+<col width="13%" />
 <col width="7%" />
+<col width="6%" />
+<col width="6%" />
 <col width="7%" />
-<col width="8%" />
 <col width="12%" />
 <col width="12%" />
-<col width="8%" />
-<col width="10%" />
-<col width="10%" />
+<col width="9%" />
+<col width="11%" />
+<col width="11%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -636,109 +655,109 @@ report of data quality issues:</p>
 <td align="left">Cholesterol</td>
 <td align="left">mg/dL</td>
 <td align="left">NA</td>
-<td align="right">50</td>
-<td align="right">41</td>
-<td align="right">119.34902</td>
-<td align="right">175.46788</td>
-<td align="right">9.70</td>
-<td align="right">3.70000</td>
-<td align="right">342.5300</td>
+<td align="right">72</td>
+<td align="right">63</td>
+<td align="right">208.839048</td>
+<td align="right">49.842307</td>
+<td align="right">205.420</td>
+<td align="right">134.68100</td>
+<td align="right">333.28100</td>
 </tr>
 <tr class="even">
 <td align="left">Cholesterol</td>
 <td align="left">mmol/L</td>
 <td align="left">NA</td>
-<td align="right">40</td>
-<td align="right">33</td>
-<td align="right">185.58394</td>
-<td align="right">197.11032</td>
-<td align="right">183.62</td>
-<td align="right">3.73600</td>
-<td align="right">657.6000</td>
+<td align="right">44</td>
+<td align="right">34</td>
+<td align="right">5.534706</td>
+<td align="right">1.143888</td>
+<td align="right">5.465</td>
+<td align="right">3.76400</td>
+<td align="right">7.63825</td>
 </tr>
 <tr class="odd">
 <td align="left">Cholesterol</td>
 <td align="left">NA</td>
 <td align="left">NA</td>
-<td align="right">10</td>
-<td align="right">8</td>
-<td align="right">102.32375</td>
-<td align="right">84.31264</td>
-<td align="right">141.32</td>
-<td align="right">0.56000</td>
-<td align="right">189.1785</td>
+<td align="right">15</td>
+<td align="right">15</td>
+<td align="right">218.484667</td>
+<td align="right">63.022379</td>
+<td align="right">199.740</td>
+<td align="right">142.48750</td>
+<td align="right">337.37050</td>
 </tr>
 <tr class="even">
 <td align="left">Creatinine</td>
 <td align="left">mg/dL</td>
 <td align="left">NA</td>
-<td align="right">54</td>
-<td align="right">46</td>
-<td align="right">94.63500</td>
-<td align="right">212.69011</td>
-<td align="right">2.87</td>
-<td align="right">0.70000</td>
-<td align="right">915.3400</td>
+<td align="right">72</td>
+<td align="right">63</td>
+<td align="right">1.937619</td>
+<td align="right">1.584282</td>
+<td align="right">1.330</td>
+<td align="right">0.62650</td>
+<td align="right">5.56850</td>
 </tr>
 <tr class="odd">
 <td align="left">Creatinine</td>
 <td align="left">umol/L</td>
 <td align="left">NA</td>
-<td align="right">37</td>
-<td align="right">32</td>
-<td align="right">57.27156</td>
-<td align="right">82.24823</td>
-<td align="right">2.72</td>
-<td align="right">-2.25000</td>
-<td align="right">292.5532</td>
+<td align="right">49</td>
+<td align="right">44</td>
+<td align="right">158.944318</td>
+<td align="right">140.062163</td>
+<td align="right">89.005</td>
+<td align="right">1.40000</td>
+<td align="right">491.02875</td>
 </tr>
 <tr class="even">
 <td align="left">Creatinine</td>
 <td align="left">NA</td>
 <td align="left">NA</td>
-<td align="right">9</td>
-<td align="right">8</td>
-<td align="right">74.75500</td>
-<td align="right">109.80029</td>
-<td align="right">41.49</td>
-<td align="right">0.14175</td>
-<td align="right">283.1100</td>
+<td align="right">10</td>
+<td align="right">6</td>
+<td align="right">1.951667</td>
+<td align="right">1.819158</td>
+<td align="right">1.000</td>
+<td align="right">0.76500</td>
+<td align="right">5.01625</td>
 </tr>
 <tr class="odd">
 <td align="left">Glucose</td>
 <td align="left">mg/dL</td>
 <td align="left">NA</td>
-<td align="right">55</td>
-<td align="right">41</td>
-<td align="right">88.75610</td>
-<td align="right">159.26087</td>
-<td align="right">16.30</td>
-<td align="right">0.00000</td>
-<td align="right">500.0000</td>
+<td align="right">80</td>
+<td align="right">64</td>
+<td align="right">118.192969</td>
+<td align="right">56.800089</td>
+<td align="right">107.045</td>
+<td align="right">5.13625</td>
+<td align="right">235.12925</td>
 </tr>
 <tr class="even">
 <td align="left">Glucose</td>
 <td align="left">mmol/L</td>
 <td align="left">NA</td>
-<td align="right">32</td>
-<td align="right">26</td>
-<td align="right">71.28846</td>
-<td align="right">63.38110</td>
-<td align="right">84.30</td>
-<td align="right">4.56250</td>
-<td align="right">202.9750</td>
+<td align="right">41</td>
+<td align="right">35</td>
+<td align="right">7.055143</td>
+<td align="right">3.290111</td>
+<td align="right">6.210</td>
+<td align="right">0.33800</td>
+<td align="right">12.92000</td>
 </tr>
 <tr class="odd">
 <td align="left">Glucose</td>
 <td align="left">NA</td>
 <td align="left">NA</td>
-<td align="right">13</td>
+<td align="right">10</td>
 <td align="right">9</td>
-<td align="right">178.11111</td>
-<td align="right">314.49209</td>
-<td align="right">82.90</td>
-<td align="right">5.74000</td>
-<td align="right">841.0000</td>
+<td align="right">131.460000</td>
+<td align="right">85.571461</td>
+<td align="right">95.030</td>
+<td align="right">21.29000</td>
+<td align="right">259.04800</td>
 </tr>
 </tbody>
 </table>
@@ -761,116 +780,116 @@ values:</p>
 <tr class="header">
 <th align="left">patient_id</th>
 <th align="left">test</th>
-<th align="left">test_date</th>
-<th align="left">unit</th>
 <th align="left">value</th>
+<th align="left">unit</th>
+<th align="left">test_date</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td align="left">P001</td>
 <td align="left">Glucose</td>
-<td align="left">2026/09/15</td>
-<td align="left">mg/dL</td>
-<td align="left">N/A</td>
+<td align="left">5.5 mmol/L</td>
+<td align="left">mmol/L</td>
+<td align="left">2026/02/20</td>
 </tr>
 <tr class="even">
 <td align="left">P002</td>
 <td align="left">Creatinine</td>
 <td align="left">pending</td>
-<td align="left">mmol/L</td>
-<td align="left">7..2</td>
+<td align="left">mg/dL</td>
+<td align="left">unknown</td>
 </tr>
 <tr class="odd">
 <td align="left">P003</td>
 <td align="left">Cholesterol</td>
-<td align="left">2025/10/30</td>
+<td align="left">&gt;500</td>
 <td align="left">umol/L</td>
-<td align="left">180 (post-meal)</td>
+<td align="left">2026-06-16</td>
 </tr>
 <tr class="even">
 <td align="left">P004</td>
 <td align="left">NA</td>
-<td align="left">2026-04-02</td>
+<td align="left">180 (post-meal)</td>
 <td align="left">NA</td>
-<td align="left">&gt;500</td>
+<td align="left">2025-12-17</td>
 </tr>
 <tr class="odd">
 <td align="left">P005</td>
 <td align="left">NA</td>
-<td align="left">1900-01-01</td>
+<td align="left">200 mg/dL</td>
 <td align="left">NA</td>
-<td align="left">&lt;40</td>
+<td align="left">2026/07/24</td>
 </tr>
 <tr class="even">
 <td align="left">P006</td>
 <td align="left">NA</td>
-<td align="left">2026-08-14</td>
+<td align="left">&lt;100</td>
 <td align="left">NA</td>
-<td align="left">8.5.1</td>
+<td align="left">2026-08-13</td>
 </tr>
 <tr class="odd">
 <td align="left">P007</td>
 <td align="left">NA</td>
-<td align="left">2026/08/05</td>
+<td align="left">8.5.1</td>
 <td align="left">NA</td>
-<td align="left">6..5</td>
+<td align="left">2026-03-09</td>
 </tr>
 <tr class="even">
 <td align="left">P008</td>
 <td align="left">NA</td>
-<td align="left">2026/04/26</td>
+<td align="left">hemolyzed</td>
 <td align="left">NA</td>
-<td align="left">see comment</td>
+<td align="left">2026/07/26</td>
 </tr>
 <tr class="odd">
 <td align="left">P009</td>
 <td align="left">NA</td>
-<td align="left">2026-08-24</td>
+<td align="left">see note</td>
 <td align="left">NA</td>
-<td align="left">normal range</td>
+<td align="left">2026-05-01</td>
 </tr>
 <tr class="even">
 <td align="left">P010</td>
 <td align="left">NA</td>
-<td align="left">2026-08-15</td>
+<td align="left">2.8 (critical)</td>
 <td align="left">NA</td>
-<td align="left">1.2 mg/dL</td>
+<td align="left">2025-11-17</td>
 </tr>
 <tr class="odd">
 <td align="left">P011</td>
 <td align="left">NA</td>
-<td align="left">2025-12-26</td>
+<td align="left">7..2</td>
 <td align="left">NA</td>
-<td align="left">110 umol/L</td>
+<td align="left">2026-09-12</td>
 </tr>
 <tr class="even">
 <td align="left">P012</td>
 <td align="left">NA</td>
-<td align="left">2026/03/28</td>
+<td align="left">N/A</td>
 <td align="left">NA</td>
-<td align="left">&gt;5.0</td>
+<td align="left">2026-03-21</td>
 </tr>
 <tr class="odd">
 <td align="left">P013</td>
 <td align="left">NA</td>
-<td align="left">2026/05/22</td>
+<td align="left">normal range</td>
 <td align="left">NA</td>
-<td align="left">(1.2)</td>
+<td align="left">2026-10-16</td>
 </tr>
 <tr class="even">
 <td align="left">P014</td>
 <td align="left">NA</td>
-<td align="left">2026-04-19</td>
-<td align="left">NA</td>
 <td align="left">&gt;400</td>
+<td align="left">NA</td>
+<td align="left">2026/07/10</td>
 </tr>
 <tr class="odd">
 <td align="left">P015</td>
 <td align="left">NA</td>
-<td align="left">2026/02/13</td>
+<td align="left">lipemic</td>
 <td align="left">NA</td>
-<td align="left">250 (borderline)</td>
+<td align="left">2025/12/08</td>
 </tr>
 </tbody>
 </table>
@@ -910,55 +929,31 @@ indicators (e.g., “&lt;40”, “&gt;500”) - Extra decimal points (e.g.,
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">Glucose</td>
-<td align="left">N/A</td>
-<td align="right">NA</td>
-<td align="left">mg/dL</td>
-</tr>
-<tr class="even">
-<td align="left">Glucose</td>
-<td align="left">7..2</td>
-<td align="right">7.2</td>
-<td align="left">mg/dL</td>
-</tr>
-<tr class="odd">
-<td align="left">Glucose</td>
-<td align="left">NA</td>
-<td align="right">NA</td>
-<td align="left">mmol/L</td>
-</tr>
-<tr class="even">
-<td align="left">Glucose</td>
-<td align="left">NA</td>
-<td align="right">NA</td>
-<td align="left">mg/dL</td>
-</tr>
-<tr class="odd">
-<td align="left">Glucose</td>
-<td align="left">NA</td>
-<td align="right">NA</td>
-<td align="left">NA</td>
-</tr>
-<tr class="even">
-<td align="left">Glucose</td>
-<td align="left">N/A</td>
-<td align="right">NA</td>
-<td align="left">mg/dL</td>
-</tr>
-<tr class="odd">
-<td align="left">Glucose</td>
+<td align="left">Creatinine</td>
 <td align="left">NA</td>
 <td align="right">NA</td>
 <td align="left">mg/dL</td>
 </tr>
 <tr class="even">
-<td align="left">Glucose</td>
-<td align="left">180 (post-meal)</td>
-<td align="right">180.0</td>
+<td align="left">Cholesterol</td>
+<td align="left">5.5 mmol/L</td>
+<td align="right">5.5</td>
 <td align="left">mmol/L</td>
 </tr>
 <tr class="odd">
 <td align="left">Glucose</td>
+<td align="left">pending</td>
+<td align="right">NA</td>
+<td align="left">mmol/L</td>
+</tr>
+<tr class="even">
+<td align="left">Cholesterol</td>
+<td align="left">NA</td>
+<td align="right">NA</td>
+<td align="left">mmol/L</td>
+</tr>
+<tr class="odd">
+<td align="left">Cholesterol</td>
 <td align="left">NA</td>
 <td align="right">NA</td>
 <td align="left">mmol/L</td>
@@ -971,33 +966,57 @@ indicators (e.g., “&lt;40”, “&gt;500”) - Extra decimal points (e.g.,
 </tr>
 <tr class="odd">
 <td align="left">Glucose</td>
+<td align="left">180 (post-meal)</td>
+<td align="right">180.0</td>
+<td align="left">mg/dL</td>
+</tr>
+<tr class="even">
+<td align="left">Cholesterol</td>
+<td align="left">200 mg/dL</td>
+<td align="right">200.0</td>
+<td align="left">mmol/L</td>
+</tr>
+<tr class="odd">
+<td align="left">Cholesterol</td>
+<td align="left">&lt;100</td>
+<td align="right">100.0</td>
+<td align="left">mmol/L</td>
+</tr>
+<tr class="even">
+<td align="left">Glucose</td>
+<td align="left">8.5.1</td>
+<td align="right">8.5</td>
+<td align="left">mg/dL</td>
+</tr>
+<tr class="odd">
+<td align="left">Creatinine</td>
+<td align="left">hemolyzed</td>
+<td align="right">NA</td>
+<td align="left">umol/L</td>
+</tr>
+<tr class="even">
+<td align="left">Creatinine</td>
+<td align="left">see note</td>
+<td align="right">NA</td>
+<td align="left">NA</td>
+</tr>
+<tr class="odd">
+<td align="left">Cholesterol</td>
 <td align="left">NA</td>
 <td align="right">NA</td>
 <td align="left">mg/dL</td>
 </tr>
 <tr class="even">
 <td align="left">Glucose</td>
-<td align="left">&lt;40</td>
-<td align="right">40.0</td>
-<td align="left">mg/dL</td>
-</tr>
-<tr class="odd">
-<td align="left">Glucose</td>
-<td align="left">8.5.1</td>
-<td align="right">8.5</td>
-<td align="left">mg/dL</td>
-</tr>
-<tr class="even">
-<td align="left">Glucose</td>
-<td align="left">6..5</td>
-<td align="right">6.5</td>
-<td align="left">mg/dL</td>
-</tr>
-<tr class="odd">
-<td align="left">Glucose</td>
-<td align="left">&lt;40</td>
-<td align="right">40.0</td>
 <td align="left">NA</td>
+<td align="right">NA</td>
+<td align="left">mmol/L</td>
+</tr>
+<tr class="odd">
+<td align="left">Creatinine</td>
+<td align="left">2.8 (critical)</td>
+<td align="right">2.8</td>
+<td align="left">mg/dL</td>
 </tr>
 </tbody>
 </table>
@@ -1028,64 +1047,64 @@ indicators (e.g., “&lt;40”, “&gt;500”) - Extra decimal points (e.g.,
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">2026/09/15</td>
-<td align="left">2026-09-15</td>
+<td align="left">2026/02/20</td>
+<td align="left">2026-02-20</td>
 </tr>
 <tr class="even">
-<td align="left">pending</td>
+<td align="left">2026/02/20</td>
+<td align="left">2026-02-20</td>
+</tr>
+<tr class="odd">
+<td align="left">2026/02/20</td>
+<td align="left">2026-02-20</td>
+</tr>
+<tr class="even">
+<td align="left">unknown</td>
 <td align="left">NA</td>
 </tr>
 <tr class="odd">
-<td align="left">2025/10/30</td>
-<td align="left">2025-10-30</td>
+<td align="left">unknown</td>
+<td align="left">NA</td>
 </tr>
 <tr class="even">
-<td align="left">2026-04-02</td>
-<td align="left">2026-04-02</td>
+<td align="left">unknown</td>
+<td align="left">NA</td>
 </tr>
 <tr class="odd">
-<td align="left">1900-01-01</td>
-<td align="left">1900-01-01</td>
+<td align="left">2026-06-16</td>
+<td align="left">2026-06-16</td>
 </tr>
 <tr class="even">
-<td align="left">2026-08-14</td>
-<td align="left">2026-08-14</td>
+<td align="left">2026-06-16</td>
+<td align="left">2026-06-16</td>
 </tr>
 <tr class="odd">
-<td align="left">2026/08/05</td>
-<td align="left">2026-08-05</td>
+<td align="left">2026-06-16</td>
+<td align="left">2026-06-16</td>
 </tr>
 <tr class="even">
-<td align="left">2026/04/26</td>
-<td align="left">2026-04-26</td>
+<td align="left">2025-12-17</td>
+<td align="left">2025-12-17</td>
 </tr>
 <tr class="odd">
-<td align="left">2026-08-24</td>
-<td align="left">2026-08-24</td>
+<td align="left">2025-12-17</td>
+<td align="left">2025-12-17</td>
 </tr>
 <tr class="even">
-<td align="left">2026-04-02</td>
-<td align="left">2026-04-02</td>
+<td align="left">2025-12-17</td>
+<td align="left">2025-12-17</td>
 </tr>
 <tr class="odd">
-<td align="left">2026-08-15</td>
-<td align="left">2026-08-15</td>
+<td align="left">2026/07/24</td>
+<td align="left">2026-07-24</td>
 </tr>
 <tr class="even">
-<td align="left">2025-12-26</td>
-<td align="left">2025-12-26</td>
+<td align="left">2026/07/24</td>
+<td align="left">2026-07-24</td>
 </tr>
 <tr class="odd">
-<td align="left">2026/03/28</td>
-<td align="left">2026-03-28</td>
-</tr>
-<tr class="even">
-<td align="left">2026/03/28</td>
-<td align="left">2026-03-28</td>
-</tr>
-<tr class="odd">
-<td align="left">2026/05/22</td>
-<td align="left">2026-05-22</td>
+<td align="left">2026/07/24</td>
+<td align="left">2026-07-24</td>
 </tr>
 </tbody>
 </table>
@@ -1107,53 +1126,53 @@ indicators (e.g., “&lt;40”, “&gt;500”) - Extra decimal points (e.g.,
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">P002</td>
-<td align="left">Glucose</td>
-<td align="left">pending</td>
-</tr>
-<tr class="even">
-<td align="left">P068</td>
-<td align="left">Glucose</td>
-<td align="left">unknown</td>
-</tr>
-<tr class="odd">
-<td align="left">P079</td>
+<td align="left">P001</td>
 <td align="left">Glucose</td>
 <td align="left">unknown</td>
 </tr>
 <tr class="even">
-<td align="left">P088</td>
-<td align="left">Glucose</td>
-<td align="left">pending</td>
+<td align="left">P001</td>
+<td align="left">Creatinine</td>
+<td align="left">unknown</td>
 </tr>
 <tr class="odd">
-<td align="left">P018</td>
+<td align="left">P001</td>
+<td align="left">Cholesterol</td>
+<td align="left">unknown</td>
+</tr>
+<tr class="even">
+<td align="left">P005</td>
+<td align="left">Glucose</td>
+<td align="left">unknown</td>
+</tr>
+<tr class="odd">
+<td align="left">P005</td>
 <td align="left">Creatinine</td>
 <td align="left">unknown</td>
 </tr>
 <tr class="even">
-<td align="left">P058</td>
+<td align="left">P005</td>
+<td align="left">Cholesterol</td>
+<td align="left">unknown</td>
+</tr>
+<tr class="odd">
+<td align="left">P008</td>
+<td align="left">Glucose</td>
+<td align="left">N/A</td>
+</tr>
+<tr class="even">
+<td align="left">P008</td>
 <td align="left">Creatinine</td>
 <td align="left">N/A</td>
 </tr>
 <tr class="odd">
-<td align="left">P059</td>
-<td align="left">Creatinine</td>
+<td align="left">P008</td>
+<td align="left">Cholesterol</td>
 <td align="left">N/A</td>
 </tr>
 <tr class="even">
-<td align="left">P065</td>
-<td align="left">Creatinine</td>
-<td align="left"></td>
-</tr>
-<tr class="odd">
-<td align="left">P073</td>
-<td align="left">Creatinine</td>
-<td align="left">unknown</td>
-</tr>
-<tr class="even">
-<td align="left">P080</td>
-<td align="left">Creatinine</td>
+<td align="left">P010</td>
+<td align="left">Glucose</td>
 <td align="left">N/A</td>
 </tr>
 </tbody>
@@ -1207,109 +1226,109 @@ laboratories. We will standardize all values to conventional units:</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">P002</td>
+<td align="left">P001</td>
 <td align="left">Glucose</td>
-<td align="right">2282.4</td>
+<td align="right">219.7800000</td>
+<td align="left">mg/dL</td>
+<td align="left">2026-02-20</td>
+</tr>
+<tr class="even">
+<td align="left">P001</td>
+<td align="left">Cholesterol</td>
+<td align="right">205.4200000</td>
+<td align="left">mg/dL</td>
+<td align="left">2026-02-20</td>
+</tr>
+<tr class="odd">
+<td align="left">P001</td>
+<td align="left">Glucose</td>
+<td align="right">4.5700000</td>
 <td align="left">mg/dL</td>
 <td align="left">NA</td>
+</tr>
+<tr class="even">
+<td align="left">P001</td>
+<td align="left">Creatinine</td>
+<td align="right">0.6100000</td>
+<td align="left">mg/dL</td>
+<td align="left">NA</td>
+</tr>
+<tr class="odd">
+<td align="left">P001</td>
+<td align="left">Cholesterol</td>
+<td align="right">212.6850000</td>
+<td align="left">mg/dL</td>
+<td align="left">NA</td>
+</tr>
+<tr class="even">
+<td align="left">P002</td>
+<td align="left">Glucose</td>
+<td align="right">208.3400000</td>
+<td align="left">mg/dL</td>
+<td align="left">2026-06-16</td>
+</tr>
+<tr class="odd">
+<td align="left">P002</td>
+<td align="left">Creatinine</td>
+<td align="right">1.5200000</td>
+<td align="left">mg/dL</td>
+<td align="left">2026-06-16</td>
+</tr>
+<tr class="even">
+<td align="left">P002</td>
+<td align="left">Cholesterol</td>
+<td align="right">326.6800000</td>
+<td align="left">mg/dL</td>
+<td align="left">2026-06-16</td>
+</tr>
+<tr class="odd">
+<td align="left">P003</td>
+<td align="left">Glucose</td>
+<td align="right">217.4900000</td>
+<td align="left">mg/dL</td>
+<td align="left">2025-12-17</td>
 </tr>
 <tr class="even">
 <td align="left">P003</td>
-<td align="left">Glucose</td>
-<td align="right">7.2</td>
+<td align="left">Creatinine</td>
+<td align="right">0.7371041</td>
 <td align="left">mg/dL</td>
-<td align="left">2025-10-30</td>
+<td align="left">2025-12-17</td>
 </tr>
 <tr class="odd">
-<td align="left">P004</td>
-<td align="left">Glucose</td>
-<td align="right">95.6</td>
+<td align="left">P003</td>
+<td align="left">Cholesterol</td>
+<td align="right">245.8000000</td>
 <td align="left">mg/dL</td>
-<td align="left">2026-04-02</td>
+<td align="left">2025-12-17</td>
 </tr>
 <tr class="even">
-<td align="left">P005</td>
-<td align="left">Glucose</td>
-<td align="right">1512.0</td>
+<td align="left">P003</td>
+<td align="left">Creatinine</td>
+<td align="right">1.5500000</td>
 <td align="left">mg/dL</td>
-<td align="left">1900-01-01</td>
+<td align="left">2026-07-24</td>
 </tr>
 <tr class="odd">
-<td align="left">P006</td>
+<td align="left">P003</td>
 <td align="left">Glucose</td>
-<td align="right">95.4</td>
+<td align="right">107.6400000</td>
 <td align="left">mg/dL</td>
-<td align="left">2026-08-14</td>
+<td align="left">2026-08-13</td>
 </tr>
 <tr class="even">
-<td align="left">P007</td>
-<td align="left">Glucose</td>
-<td align="right">186.2</td>
+<td align="left">P003</td>
+<td align="left">Creatinine</td>
+<td align="right">0.8995475</td>
 <td align="left">mg/dL</td>
-<td align="left">2026-08-05</td>
+<td align="left">2026-08-13</td>
 </tr>
 <tr class="odd">
-<td align="left">P008</td>
-<td align="left">Glucose</td>
-<td align="right">6.1</td>
+<td align="left">P003</td>
+<td align="left">Cholesterol</td>
+<td align="right">165.2000000</td>
 <td align="left">mg/dL</td>
-<td align="left">2026-04-26</td>
-</tr>
-<tr class="even">
-<td align="left">P009</td>
-<td align="left">Glucose</td>
-<td align="right">257.4</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-08-24</td>
-</tr>
-<tr class="odd">
-<td align="left">P011</td>
-<td align="left">Glucose</td>
-<td align="right">5.3</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-08-15</td>
-</tr>
-<tr class="even">
-<td align="left">P012</td>
-<td align="left">Glucose</td>
-<td align="right">6.6</td>
-<td align="left">mg/dL</td>
-<td align="left">2025-12-26</td>
-</tr>
-<tr class="odd">
-<td align="left">P013</td>
-<td align="left">Glucose</td>
-<td align="right">1614.6</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-03-28</td>
-</tr>
-<tr class="even">
-<td align="left">P014</td>
-<td align="left">Glucose</td>
-<td align="right">190.2</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-03-28</td>
-</tr>
-<tr class="odd">
-<td align="left">P015</td>
-<td align="left">Glucose</td>
-<td align="right">5.1</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-05-22</td>
-</tr>
-<tr class="even">
-<td align="left">P016</td>
-<td align="left">Glucose</td>
-<td align="right">14.4</td>
-<td align="left">mg/dL</td>
-<td align="left">2026-04-19</td>
-</tr>
-<tr class="odd">
-<td align="left">P018</td>
-<td align="left">Glucose</td>
-<td align="right">6.7</td>
-<td align="left">mg/dL</td>
-<td align="left">NA</td>
+<td align="left">2026-08-13</td>
 </tr>
 </tbody>
 </table>
@@ -1385,18 +1404,18 @@ caution for skewed data</li>
 <span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>}</span>
 <span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="co">#&gt;  Glucose :</span></span>
-<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt;   Total values: 86 </span></span>
-<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt;   Outliers detected: 19 </span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt;   Total values: 119 </span></span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt;   Outliers detected: 4 </span></span>
 <span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt;   Missing values: 0 </span></span>
 <span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a><span class="co">#&gt;  Creatinine :</span></span>
-<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a><span class="co">#&gt;   Total values: 92 </span></span>
-<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a><span class="co">#&gt;   Outliers detected: 23 </span></span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a><span class="co">#&gt;   Total values: 118 </span></span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a><span class="co">#&gt;   Outliers detected: 5 </span></span>
 <span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a><span class="co">#&gt;   Missing values: 0 </span></span>
 <span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a><span class="co">#&gt;  Cholesterol :</span></span>
-<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co">#&gt;   Total values: 90 </span></span>
-<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a><span class="co">#&gt;   Outliers detected: 22 </span></span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co">#&gt;   Total values: 119 </span></span>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a><span class="co">#&gt;   Outliers detected: 6 </span></span>
 <span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a><span class="co">#&gt;   Missing values: 0</span></span></code></pre></div>
 <p>Compare outlier detection methods for Glucose:</p>
 <div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>glucose_values <span class="ot">&lt;-</span> lab_data_std<span class="sc">$</span>value[lab_data_std<span class="sc">$</span>test <span class="sc">==</span> <span class="st">&quot;Glucose&quot;</span>]</span>
@@ -1420,11 +1439,11 @@ caution for skewed data</li>
 <tbody>
 <tr class="odd">
 <td align="left">MAD</td>
-<td align="right">19</td>
+<td align="right">35</td>
 </tr>
 <tr class="even">
 <td align="left">IQR</td>
-<td align="right">19</td>
+<td align="right">4</td>
 </tr>
 <tr class="odd">
 <td align="left">Z-score</td>
@@ -1489,38 +1508,38 @@ data errors.</p>
 <tr class="odd">
 <td align="left">Glucose</td>
 <td align="left">Before</td>
-<td align="right">86</td>
-<td align="right">599.81</td>
+<td align="right">119</td>
+<td align="right">194.12</td>
 </tr>
 <tr class="even">
 <td align="left">Glucose</td>
 <td align="left">After</td>
-<td align="right">67</td>
-<td align="right">82.01</td>
+<td align="right">115</td>
+<td align="right">113.56</td>
 </tr>
 <tr class="odd">
 <td align="left">Creatinine</td>
 <td align="left">Before</td>
-<td align="right">92</td>
-<td align="right">55.35</td>
+<td align="right">118</td>
+<td align="right">1.90</td>
 </tr>
 <tr class="even">
 <td align="left">Creatinine</td>
 <td align="left">After</td>
-<td align="right">69</td>
-<td align="right">1.11</td>
+<td align="right">113</td>
+<td align="right">1.72</td>
 </tr>
 <tr class="odd">
 <td align="left">Cholesterol</td>
 <td align="left">Before</td>
-<td align="right">90</td>
-<td align="right">2818.59</td>
+<td align="right">119</td>
+<td align="right">563.37</td>
 </tr>
 <tr class="even">
 <td align="left">Cholesterol</td>
 <td align="left">After</td>
-<td align="right">68</td>
-<td align="right">147.00</td>
+<td align="right">113</td>
+<td align="right">210.28</td>
 </tr>
 </tbody>
 </table>
@@ -1557,7 +1576,9 @@ combination:</p>
 <span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>lab_wide <span class="ot">&lt;-</span> lab_wide <span class="sc">%&gt;%</span></span>
 <span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>  <span class="fu">arrange</span>(patient_id, test_date)</span>
 <span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a></span>
-<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(lab_wide, <span class="dv">10</span>), <span class="at">caption =</span> <span class="st">&quot;Longitudinal Lab Data (First 10 records)&quot;</span>)</span></code></pre></div>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a>test_cols <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Glucose&quot;</span>, <span class="st">&quot;Creatinine&quot;</span>, <span class="st">&quot;Cholesterol&quot;</span>)</span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a></span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(lab_wide, <span class="dv">10</span>), <span class="at">caption =</span> <span class="st">&quot;Longitudinal Lab Data (First 10 records)&quot;</span>)</span></code></pre></div>
 <table>
 <caption>Longitudinal Lab Data (First 10 records)</caption>
 <thead>
@@ -1572,73 +1593,73 @@ combination:</p>
 <tbody>
 <tr class="odd">
 <td align="left">P001</td>
-<td align="left">2026-02-26</td>
+<td align="left">2026-02-20</td>
+<td align="right">205.4200</td>
 <td align="right">NA</td>
-<td align="right">1.13</td>
-<td align="right">NA</td>
-</tr>
-<tr class="even">
-<td align="left">P001</td>
-<td align="left">2026-04-07</td>
-<td align="right">3.70</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-</tr>
-<tr class="odd">
-<td align="left">P002</td>
-<td align="left">2026-02-15</td>
-<td align="right">9.70</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
+<td align="right">219.78</td>
 </tr>
 <tr class="even">
 <td align="left">P002</td>
-<td align="left">2026-04-25</td>
+<td align="left">2026-06-16</td>
+<td align="right">326.6800</td>
+<td align="right">1.5200000</td>
+<td align="right">208.34</td>
+</tr>
+<tr class="odd">
+<td align="left">P003</td>
+<td align="left">2025-12-17</td>
+<td align="right">245.8000</td>
+<td align="right">0.7371041</td>
+<td align="right">217.49</td>
+</tr>
+<tr class="even">
+<td align="left">P003</td>
+<td align="left">2026-07-24</td>
 <td align="right">NA</td>
-<td align="right">NA</td>
+<td align="right">1.5500000</td>
 <td align="right">NA</td>
 </tr>
 <tr class="odd">
 <td align="left">P003</td>
-<td align="left">2025-10-30</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">7.2</td>
+<td align="left">2026-08-13</td>
+<td align="right">165.2000</td>
+<td align="right">0.8995475</td>
+<td align="right">107.64</td>
 </tr>
 <tr class="even">
-<td align="left">P003</td>
-<td align="left">2026-06-23</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
+<td align="left">P004</td>
+<td align="left">2026-03-09</td>
+<td align="right">210.7515</td>
+<td align="right">4.7207014</td>
+<td align="right">93.60</td>
 </tr>
 <tr class="odd">
-<td align="left">P003</td>
-<td align="left">2026-08-24</td>
+<td align="left">P005</td>
+<td align="left">2025-11-17</td>
 <td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
+<td align="right">0.7100000</td>
+<td align="right">97.42</td>
 </tr>
 <tr class="even">
-<td align="left">P004</td>
-<td align="left">2026-03-16</td>
-<td align="right">329.49</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
+<td align="left">P005</td>
+<td align="left">2026-05-01</td>
+<td align="right">150.7600</td>
+<td align="right">1.9100000</td>
+<td align="right">6.30</td>
 </tr>
 <tr class="odd">
-<td align="left">P004</td>
-<td align="left">2026-04-02</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">95.6</td>
+<td align="left">P005</td>
+<td align="left">2026-07-26</td>
+<td align="right">133.6800</td>
+<td align="right">0.9100000</td>
+<td align="right">167.58</td>
 </tr>
 <tr class="even">
-<td align="left">P004</td>
-<td align="left">2026-08-05</td>
-<td align="right">NA</td>
-<td align="right">1.20</td>
-<td align="right">NA</td>
+<td align="left">P006</td>
+<td align="left">2026-03-21</td>
+<td align="right">199.7400</td>
+<td align="right">0.8200000</td>
+<td align="right">98.10</td>
 </tr>
 </tbody>
 </table>
@@ -1666,95 +1687,133 @@ combination:</p>
 <tbody>
 <tr class="odd">
 <td align="left">P001</td>
-<td align="right">2</td>
-<td align="left">2026-02-26</td>
-<td align="left">2026-04-07</td>
+<td align="right">1</td>
+<td align="left">2026-02-20</td>
+<td align="left">2026-02-20</td>
 </tr>
 <tr class="even">
 <td align="left">P002</td>
-<td align="right">2</td>
-<td align="left">2026-02-15</td>
-<td align="left">2026-04-25</td>
+<td align="right">1</td>
+<td align="left">2026-06-16</td>
+<td align="left">2026-06-16</td>
 </tr>
 <tr class="odd">
 <td align="left">P003</td>
 <td align="right">3</td>
-<td align="left">2025-10-30</td>
-<td align="left">2026-08-24</td>
+<td align="left">2025-12-17</td>
+<td align="left">2026-08-13</td>
 </tr>
 <tr class="even">
 <td align="left">P004</td>
-<td align="right">3</td>
-<td align="left">2026-03-16</td>
-<td align="left">2026-08-05</td>
+<td align="right">1</td>
+<td align="left">2026-03-09</td>
+<td align="left">2026-03-09</td>
 </tr>
 <tr class="odd">
 <td align="left">P005</td>
 <td align="right">3</td>
-<td align="left">1900-01-01</td>
-<td align="left">2026-06-16</td>
+<td align="left">2025-11-17</td>
+<td align="left">2026-07-26</td>
 </tr>
 <tr class="even">
 <td align="left">P006</td>
 <td align="right">2</td>
-<td align="left">2026-06-30</td>
-<td align="left">2026-08-14</td>
+<td align="left">2026-03-21</td>
+<td align="left">2026-09-12</td>
 </tr>
 <tr class="odd">
 <td align="left">P007</td>
-<td align="right">2</td>
-<td align="left">2026-08-05</td>
-<td align="left">2030-12-31</td>
+<td align="right">3</td>
+<td align="left">2025-12-08</td>
+<td align="left">2026-10-16</td>
 </tr>
 <tr class="even">
-<td align="left">P008</td>
-<td align="right">3</td>
-<td align="left">2026-01-19</td>
-<td align="left">2026-06-07</td>
-</tr>
-<tr class="odd">
 <td align="left">P009</td>
 <td align="right">3</td>
-<td align="left">2026-04-13</td>
-<td align="left">2026-08-24</td>
+<td align="left">2026-04-29</td>
+<td align="left">2026-07-03</td>
+</tr>
+<tr class="odd">
+<td align="left">P010</td>
+<td align="right">1</td>
+<td align="left">2026-08-08</td>
+<td align="left">2026-08-08</td>
 </tr>
 <tr class="even">
-<td align="left">P010</td>
-<td align="right">2</td>
-<td align="left">2025-12-20</td>
-<td align="left">2026-02-26</td>
+<td align="left">P011</td>
+<td align="right">4</td>
+<td align="left">2026-06-26</td>
+<td align="left">2026-08-23</td>
 </tr>
 </tbody>
 </table>
 <p>Assess missing data patterns:</p>
 <div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>missing_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>  <span class="at">Variable =</span> <span class="fu">names</span>(lab_wide)[<span class="sc">-</span><span class="dv">1</span>],</span>
-<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="at">Missing_Count =</span> <span class="fu">sapply</span>(lab_wide[<span class="sc">-</span><span class="dv">1</span>], <span class="cf">function</span>(x) <span class="fu">sum</span>(<span class="fu">is.na</span>(x))),</span>
-<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>  <span class="at">Missing_Percent =</span> <span class="fu">round</span>(<span class="fu">sapply</span>(lab_wide[<span class="sc">-</span><span class="dv">1</span>], <span class="cf">function</span>(x) <span class="fu">sum</span>(<span class="fu">is.na</span>(x)) <span class="sc">/</span> <span class="fu">length</span>(x) <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>))</span>
-<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>)</span>
-<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a><span class="co">#&gt; Error in `FUN()`:</span></span>
-<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a><span class="co">#&gt; ! 参数没有用(2)</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>  <span class="at">Variable =</span> test_cols,</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="at">Missing_Count =</span> <span class="fu">sapply</span>(lab_wide[test_cols], <span class="cf">function</span>(x) <span class="fu">sum</span>(<span class="fu">is.na</span>(x))),</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>  <span class="at">Missing_Percent =</span> <span class="fu">round</span>(<span class="fu">sapply</span>(lab_wide[test_cols], <span class="cf">function</span>(x) {</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="fu">is.na</span>(x)) <span class="sc">/</span> <span class="fu">length</span>(x) <span class="sc">*</span> <span class="dv">100</span></span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>  }), <span class="dv">2</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>)</span>
 <span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a></span>
-<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(missing_summary, <span class="at">caption =</span> <span class="st">&quot;Missing Data Summary by Test&quot;</span>)</span>
-<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
-<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a><span class="co">#&gt; ! 找不到对象&#39;missing_summary&#39;</span></span></code></pre></div>
-<p>Filter records with too much missing data:</p>
-<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>lab_wide_clean <span class="ot">&lt;-</span> <span class="fu">get_valid_subset</span>(</span>
-<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>  lab_wide,</span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(missing_summary, <span class="at">caption =</span> <span class="st">&quot;Missing Data Summary by Test&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Missing Data Summary by Test</caption>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">Variable</th>
+<th align="right">Missing_Count</th>
+<th align="right">Missing_Percent</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Glucose</td>
+<td align="left">Glucose</td>
+<td align="right">15</td>
+<td align="right">12.71</td>
+</tr>
+<tr class="even">
+<td align="left">Creatinine</td>
+<td align="left">Creatinine</td>
+<td align="right">17</td>
+<td align="right">14.41</td>
+</tr>
+<tr class="odd">
+<td align="left">Cholesterol</td>
+<td align="left">Cholesterol</td>
+<td align="right">16</td>
+<td align="right">13.56</td>
+</tr>
+</tbody>
+</table>
+<p>Filter records with too much missing data. Only the three test-result
+columns are passed to <code>get_valid_subset()</code>, so the record
+identifiers and dates are always retained; they are re-attached after
+the valid rows and columns have been selected:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>valid_idx <span class="ot">&lt;-</span> <span class="fu">get_valid_subset</span>(</span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>  lab_wide[test_cols],</span>
 <span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>  <span class="at">row_na_ratio =</span> <span class="fl">0.5</span>, <span class="co"># Allow up to 50% missing per record</span></span>
-<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>  <span class="at">col_na_ratio =</span> <span class="fl">0.3</span> <span class="co"># Allow up to 30% missing per test type</span></span>
-<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>)</span>
-<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a></span>
-<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a><span class="fu">cat</span>(</span>
-<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>  <span class="st">&quot;Dimensions:&quot;</span>, <span class="fu">nrow</span>(lab_wide), <span class="st">&quot;records&quot;</span>,</span>
-<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a>  <span class="st">&quot;-&gt;&quot;</span>, <span class="fu">nrow</span>(lab_wide_clean), <span class="st">&quot;records</span><span class="sc">\n</span><span class="st">&quot;</span></span>
-<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>)</span>
-<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a><span class="co">#&gt; Dimensions: 232 records -&gt; 232 records</span></span>
-<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a><span class="fu">cat</span>(</span>
-<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a>  <span class="st">&quot;Unique patients:&quot;</span>, <span class="fu">length</span>(<span class="fu">unique</span>(lab_wide<span class="sc">$</span>patient_id)),</span>
-<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>  <span class="st">&quot;-&gt;&quot;</span>, <span class="fu">length</span>(<span class="fu">unique</span>(lab_wide_clean<span class="sc">$</span>patient_id)), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span></span>
-<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a>)</span>
-<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a><span class="co">#&gt; Unique patients: 99 -&gt; 99</span></span></code></pre></div>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>  <span class="at">col_na_ratio =</span> <span class="fl">0.3</span>, <span class="co"># Allow up to 30% missing per test type</span></span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>  <span class="at">return_index =</span> <span class="cn">TRUE</span></span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>)</span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>lab_wide_clean <span class="ot">&lt;-</span> lab_wide[</span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a>  valid_idx<span class="sc">$</span>rows,</span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;patient_id&quot;</span>, <span class="st">&quot;test_date&quot;</span>, test_cols[valid_idx<span class="sc">$</span>cols])</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a>]</span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a><span class="fu">cat</span>(</span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>  <span class="st">&quot;Dimensions:&quot;</span>, <span class="fu">nrow</span>(lab_wide), <span class="st">&quot;records&quot;</span>,</span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a>  <span class="st">&quot;-&gt;&quot;</span>, <span class="fu">nrow</span>(lab_wide_clean), <span class="st">&quot;records</span><span class="sc">\n</span><span class="st">&quot;</span></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a>)</span>
+<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a><span class="co">#&gt; Dimensions: 118 records -&gt; 112 records</span></span>
+<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a><span class="fu">cat</span>(</span>
+<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a>  <span class="st">&quot;Unique patients:&quot;</span>, <span class="fu">length</span>(<span class="fu">unique</span>(lab_wide<span class="sc">$</span>patient_id)),</span>
+<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a>  <span class="st">&quot;-&gt;&quot;</span>, <span class="fu">length</span>(<span class="fu">unique</span>(lab_wide_clean<span class="sc">$</span>patient_id)), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span></span>
+<span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a>)</span>
+<span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a><span class="co">#&gt; Unique patients: 57 -&gt; 56</span></span></code></pre></div>
 </div>
 <div id="step-6-data-transformation" class="section level2">
 <h2>Step 6: Data Transformation</h2>
@@ -1772,79 +1831,176 @@ classifications:</p>
 <span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;Prediabetes&quot;</span>, <span class="st">&quot;Diabetes&quot;</span>),</span>
 <span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>  <span class="at">label_with_range =</span> <span class="cn">FALSE</span></span>
 <span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a>)</span>
-<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a><span class="co">#&gt; Error in `cut_by()`:</span></span>
-<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a><span class="co">#&gt; ! Some of `breaks` are not in the range of `x`!</span></span>
-<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a></span>
-<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a><span class="co"># Creatinine categories (eGFR approximation)</span></span>
-<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a>lab_wide_clean<span class="sc">$</span>renal_function <span class="ot">&lt;-</span> <span class="fu">cut_by</span>(</span>
-<span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a>  lab_wide_clean<span class="sc">$</span>Creatinine,</span>
-<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">c</span>(<span class="fl">1.2</span>, <span class="fl">2.0</span>, <span class="fl">4.0</span>),</span>
-<span id="cb19-15"><a href="#cb19-15" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;Mild&quot;</span>, <span class="st">&quot;Moderate&quot;</span>, <span class="st">&quot;Severe&quot;</span>),</span>
-<span id="cb19-16"><a href="#cb19-16" tabindex="-1"></a>  <span class="at">label_with_range =</span> <span class="cn">FALSE</span></span>
-<span id="cb19-17"><a href="#cb19-17" tabindex="-1"></a>)</span>
-<span id="cb19-18"><a href="#cb19-18" tabindex="-1"></a><span class="co">#&gt; Error in `cut_by()`:</span></span>
-<span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a><span class="co">#&gt; ! Some of `breaks` are not in the range of `x`!</span></span>
-<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a></span>
-<span id="cb19-21"><a href="#cb19-21" tabindex="-1"></a><span class="co"># Cholesterol categories</span></span>
-<span id="cb19-22"><a href="#cb19-22" tabindex="-1"></a>lab_wide_clean<span class="sc">$</span>cholesterol_category <span class="ot">&lt;-</span> <span class="fu">cut_by</span>(</span>
-<span id="cb19-23"><a href="#cb19-23" tabindex="-1"></a>  lab_wide_clean<span class="sc">$</span>Cholesterol,</span>
-<span id="cb19-24"><a href="#cb19-24" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">200</span>, <span class="dv">240</span>),</span>
-<span id="cb19-25"><a href="#cb19-25" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Desirable&quot;</span>, <span class="st">&quot;Borderline&quot;</span>, <span class="st">&quot;High&quot;</span>),</span>
-<span id="cb19-26"><a href="#cb19-26" tabindex="-1"></a>  <span class="at">label_with_range =</span> <span class="cn">FALSE</span></span>
-<span id="cb19-27"><a href="#cb19-27" tabindex="-1"></a>)</span>
-<span id="cb19-28"><a href="#cb19-28" tabindex="-1"></a><span class="co">#&gt; Error in `cut_by()`:</span></span>
-<span id="cb19-29"><a href="#cb19-29" tabindex="-1"></a><span class="co">#&gt; ! Some of `breaks` are not in the range of `x`!</span></span>
-<span id="cb19-30"><a href="#cb19-30" tabindex="-1"></a></span>
-<span id="cb19-31"><a href="#cb19-31" tabindex="-1"></a><span class="co"># Summary of categories across all visits</span></span>
-<span id="cb19-32"><a href="#cb19-32" tabindex="-1"></a>cat_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb19-33"><a href="#cb19-33" tabindex="-1"></a>  <span class="at">Category =</span> <span class="fu">c</span>(</span>
-<span id="cb19-34"><a href="#cb19-34" tabindex="-1"></a>    <span class="fu">rep</span>(<span class="st">&quot;Glucose&quot;</span>, <span class="fu">length</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>glucose_category))),</span>
-<span id="cb19-35"><a href="#cb19-35" tabindex="-1"></a>    <span class="fu">rep</span>(<span class="st">&quot;Renal Function&quot;</span>, <span class="fu">length</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>renal_function))),</span>
-<span id="cb19-36"><a href="#cb19-36" tabindex="-1"></a>    <span class="fu">rep</span>(<span class="st">&quot;Cholesterol&quot;</span>, <span class="fu">length</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>cholesterol_category)))</span>
-<span id="cb19-37"><a href="#cb19-37" tabindex="-1"></a>  ),</span>
-<span id="cb19-38"><a href="#cb19-38" tabindex="-1"></a>  <span class="at">Level =</span> <span class="fu">c</span>(</span>
-<span id="cb19-39"><a href="#cb19-39" tabindex="-1"></a>    <span class="fu">names</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>glucose_category)),</span>
-<span id="cb19-40"><a href="#cb19-40" tabindex="-1"></a>    <span class="fu">names</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>renal_function)),</span>
-<span id="cb19-41"><a href="#cb19-41" tabindex="-1"></a>    <span class="fu">names</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>cholesterol_category))</span>
-<span id="cb19-42"><a href="#cb19-42" tabindex="-1"></a>  ),</span>
-<span id="cb19-43"><a href="#cb19-43" tabindex="-1"></a>  <span class="at">Count =</span> <span class="fu">c</span>(</span>
-<span id="cb19-44"><a href="#cb19-44" tabindex="-1"></a>    <span class="fu">as.vector</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>glucose_category)),</span>
-<span id="cb19-45"><a href="#cb19-45" tabindex="-1"></a>    <span class="fu">as.vector</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>renal_function)),</span>
-<span id="cb19-46"><a href="#cb19-46" tabindex="-1"></a>    <span class="fu">as.vector</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>cholesterol_category))</span>
-<span id="cb19-47"><a href="#cb19-47" tabindex="-1"></a>  )</span>
-<span id="cb19-48"><a href="#cb19-48" tabindex="-1"></a>)</span>
-<span id="cb19-49"><a href="#cb19-49" tabindex="-1"></a></span>
-<span id="cb19-50"><a href="#cb19-50" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(cat_summary, <span class="at">caption =</span> <span class="st">&quot;Clinical Category Distributions (All Visits)&quot;</span>)</span></code></pre></div>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a><span class="co"># Creatinine categories (eGFR approximation)</span></span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a>lab_wide_clean<span class="sc">$</span>renal_function <span class="ot">&lt;-</span> <span class="fu">cut_by</span>(</span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a>  lab_wide_clean<span class="sc">$</span>Creatinine,</span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">c</span>(<span class="fl">1.2</span>, <span class="fl">2.0</span>, <span class="fl">4.0</span>),</span>
+<span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;Mild&quot;</span>, <span class="st">&quot;Moderate&quot;</span>, <span class="st">&quot;Severe&quot;</span>),</span>
+<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a>  <span class="at">label_with_range =</span> <span class="cn">FALSE</span></span>
+<span id="cb19-15"><a href="#cb19-15" tabindex="-1"></a>)</span>
+<span id="cb19-16"><a href="#cb19-16" tabindex="-1"></a></span>
+<span id="cb19-17"><a href="#cb19-17" tabindex="-1"></a><span class="co"># Cholesterol categories</span></span>
+<span id="cb19-18"><a href="#cb19-18" tabindex="-1"></a>lab_wide_clean<span class="sc">$</span>cholesterol_category <span class="ot">&lt;-</span> <span class="fu">cut_by</span>(</span>
+<span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a>  lab_wide_clean<span class="sc">$</span>Cholesterol,</span>
+<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">200</span>, <span class="dv">240</span>),</span>
+<span id="cb19-21"><a href="#cb19-21" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Desirable&quot;</span>, <span class="st">&quot;Borderline&quot;</span>, <span class="st">&quot;High&quot;</span>),</span>
+<span id="cb19-22"><a href="#cb19-22" tabindex="-1"></a>  <span class="at">label_with_range =</span> <span class="cn">FALSE</span></span>
+<span id="cb19-23"><a href="#cb19-23" tabindex="-1"></a>)</span>
+<span id="cb19-24"><a href="#cb19-24" tabindex="-1"></a></span>
+<span id="cb19-25"><a href="#cb19-25" tabindex="-1"></a><span class="co"># Summary of categories across all visits</span></span>
+<span id="cb19-26"><a href="#cb19-26" tabindex="-1"></a>cat_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb19-27"><a href="#cb19-27" tabindex="-1"></a>  <span class="at">Category =</span> <span class="fu">c</span>(</span>
+<span id="cb19-28"><a href="#cb19-28" tabindex="-1"></a>    <span class="fu">rep</span>(<span class="st">&quot;Glucose&quot;</span>, <span class="fu">length</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>glucose_category))),</span>
+<span id="cb19-29"><a href="#cb19-29" tabindex="-1"></a>    <span class="fu">rep</span>(<span class="st">&quot;Renal Function&quot;</span>, <span class="fu">length</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>renal_function))),</span>
+<span id="cb19-30"><a href="#cb19-30" tabindex="-1"></a>    <span class="fu">rep</span>(<span class="st">&quot;Cholesterol&quot;</span>, <span class="fu">length</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>cholesterol_category)))</span>
+<span id="cb19-31"><a href="#cb19-31" tabindex="-1"></a>  ),</span>
+<span id="cb19-32"><a href="#cb19-32" tabindex="-1"></a>  <span class="at">Level =</span> <span class="fu">c</span>(</span>
+<span id="cb19-33"><a href="#cb19-33" tabindex="-1"></a>    <span class="fu">names</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>glucose_category)),</span>
+<span id="cb19-34"><a href="#cb19-34" tabindex="-1"></a>    <span class="fu">names</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>renal_function)),</span>
+<span id="cb19-35"><a href="#cb19-35" tabindex="-1"></a>    <span class="fu">names</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>cholesterol_category))</span>
+<span id="cb19-36"><a href="#cb19-36" tabindex="-1"></a>  ),</span>
+<span id="cb19-37"><a href="#cb19-37" tabindex="-1"></a>  <span class="at">Count =</span> <span class="fu">c</span>(</span>
+<span id="cb19-38"><a href="#cb19-38" tabindex="-1"></a>    <span class="fu">as.vector</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>glucose_category)),</span>
+<span id="cb19-39"><a href="#cb19-39" tabindex="-1"></a>    <span class="fu">as.vector</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>renal_function)),</span>
+<span id="cb19-40"><a href="#cb19-40" tabindex="-1"></a>    <span class="fu">as.vector</span>(<span class="fu">table</span>(lab_wide_clean<span class="sc">$</span>cholesterol_category))</span>
+<span id="cb19-41"><a href="#cb19-41" tabindex="-1"></a>  )</span>
+<span id="cb19-42"><a href="#cb19-42" tabindex="-1"></a>)</span>
+<span id="cb19-43"><a href="#cb19-43" tabindex="-1"></a></span>
+<span id="cb19-44"><a href="#cb19-44" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(cat_summary, <span class="at">caption =</span> <span class="st">&quot;Clinical Category Distributions (All Visits)&quot;</span>)</span></code></pre></div>
 <table>
 <caption>Clinical Category Distributions (All Visits)</caption>
 <thead>
 <tr class="header">
 <th align="left">Category</th>
+<th align="left">Level</th>
 <th align="right">Count</th>
 </tr>
 </thead>
 <tbody>
+<tr class="odd">
+<td align="left">Glucose</td>
+<td align="left">Normal</td>
+<td align="right">40</td>
+</tr>
+<tr class="even">
+<td align="left">Glucose</td>
+<td align="left">Prediabetes</td>
+<td align="right">30</td>
+</tr>
+<tr class="odd">
+<td align="left">Glucose</td>
+<td align="left">Diabetes</td>
+<td align="right">31</td>
+</tr>
+<tr class="even">
+<td align="left">Renal Function</td>
+<td align="left">Normal</td>
+<td align="right">53</td>
+</tr>
+<tr class="odd">
+<td align="left">Renal Function</td>
+<td align="left">Mild</td>
+<td align="right">15</td>
+</tr>
+<tr class="even">
+<td align="left">Renal Function</td>
+<td align="left">Moderate</td>
+<td align="right">20</td>
+</tr>
+<tr class="odd">
+<td align="left">Renal Function</td>
+<td align="left">Severe</td>
+<td align="right">10</td>
+</tr>
+<tr class="even">
+<td align="left">Cholesterol</td>
+<td align="left">Desirable</td>
+<td align="right">46</td>
+</tr>
+<tr class="odd">
+<td align="left">Cholesterol</td>
+<td align="left">Borderline</td>
+<td align="right">32</td>
+</tr>
+<tr class="even">
+<td align="left">Cholesterol</td>
+<td align="left">High</td>
+<td align="right">23</td>
+</tr>
 </tbody>
 </table>
 </div>
 <div id="longitudinal-view-example" class="section level3">
 <h3>Longitudinal View Example</h3>
 <p>View a single patient’s trajectory over time:</p>
-<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="co"># Select one patient with multiple visits for demonstration</span></span>
-<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>patient_trajectory <span class="ot">&lt;-</span> lab_wide_clean <span class="sc">%&gt;%</span></span>
-<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>  <span class="fu">filter</span>(patient_id <span class="sc">==</span> <span class="fu">unique</span>(patient_id)[<span class="dv">1</span>]) <span class="sc">%&gt;%</span></span>
-<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>  <span class="fu">select</span>(</span>
-<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>    patient_id, test_date, Glucose, Creatinine, Cholesterol,</span>
-<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>    glucose_category, renal_function</span>
-<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a>  <span class="fu">arrange</span>(test_date)</span>
-<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a><span class="co">#&gt; Error in `select()`:</span></span>
-<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a><span class="co">#&gt; ! Can&#39;t select columns that don&#39;t exist.</span></span>
-<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a><span class="co">#&gt; ✖ Column `Glucose` doesn&#39;t exist.</span></span>
-<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a></span>
-<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(patient_trajectory, <span class="at">caption =</span> <span class="st">&quot;Example: Single Patient&#39;s Lab Trajectory&quot;</span>)</span>
-<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
-<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a><span class="co">#&gt; ! 找不到对象&#39;patient_trajectory&#39;</span></span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="co"># Select the patient with the most visits for demonstration</span></span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>patient_with_most_visits <span class="ot">&lt;-</span> lab_wide_clean <span class="sc">%&gt;%</span></span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>  <span class="fu">count</span>(patient_id, <span class="at">sort =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>  <span class="fu">pull</span>(patient_id)</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a></span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>patient_trajectory <span class="ot">&lt;-</span> lab_wide_clean <span class="sc">%&gt;%</span></span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a>  <span class="fu">filter</span>(patient_id <span class="sc">==</span> patient_with_most_visits) <span class="sc">%&gt;%</span></span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a>    patient_id, test_date, Glucose, Creatinine, Cholesterol,</span>
+<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a>    glucose_category, renal_function</span>
+<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a>  <span class="fu">arrange</span>(test_date)</span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a></span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(patient_trajectory, <span class="at">caption =</span> <span class="st">&quot;Example: Single Patient&#39;s Lab Trajectory&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Example: Single Patient’s Lab Trajectory</caption>
+<colgroup>
+<col width="12%" />
+<col width="12%" />
+<col width="9%" />
+<col width="12%" />
+<col width="14%" />
+<col width="20%" />
+<col width="17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">patient_id</th>
+<th align="left">test_date</th>
+<th align="right">Glucose</th>
+<th align="right">Creatinine</th>
+<th align="right">Cholesterol</th>
+<th align="left">glucose_category</th>
+<th align="left">renal_function</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">P005</td>
+<td align="left">2025-11-17</td>
+<td align="right">97.42</td>
+<td align="right">0.71</td>
+<td align="right">NA</td>
+<td align="left">Normal</td>
+<td align="left">Normal</td>
+</tr>
+<tr class="even">
+<td align="left">P005</td>
+<td align="left">2026-05-01</td>
+<td align="right">6.30</td>
+<td align="right">1.91</td>
+<td align="right">150.76</td>
+<td align="left">Normal</td>
+<td align="left">Mild</td>
+</tr>
+<tr class="odd">
+<td align="left">P005</td>
+<td align="left">2026-07-26</td>
+<td align="right">167.58</td>
+<td align="right">0.91</td>
+<td align="right">133.68</td>
+<td align="left">Diabetes</td>
+<td align="left">Normal</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div id="complete-cleaning-pipeline" class="section level2">
@@ -1854,87 +2010,91 @@ data:</p>
 <div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a><span class="co"># Step 1: Data Overview</span></span>
 <span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data_overview</span>(lab_data)</span>
 <span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a><span class="co">#&gt; === Data Overview Summary ===</span></span>
-<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a><span class="co">#&gt; Dataset: 300 rows, 5 columns</span></span>
+<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a><span class="co">#&gt; Dataset: 393 rows, 5 columns</span></span>
 <span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a><span class="co">#&gt; Variable Types:</span></span>
 <span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a><span class="co">#&gt;   numeric   : 1 variables</span></span>
 <span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a><span class="co">#&gt;   character : 3 variables</span></span>
 <span id="cb21-9"><a href="#cb21-9" tabindex="-1"></a><span class="co">#&gt;   date      : 1 variables</span></span>
 <span id="cb21-10"><a href="#cb21-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb21-11"><a href="#cb21-11" tabindex="-1"></a><span class="co">#&gt; Found 6 potential quality issues:</span></span>
+<span id="cb21-11"><a href="#cb21-11" tabindex="-1"></a><span class="co">#&gt; Found 4 potential quality issues:</span></span>
 <span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a><span class="co">#&gt;   outliers                 : 1 cases</span></span>
 <span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a><span class="co">#&gt;   missing_values           : 3 cases</span></span>
-<span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a><span class="co">#&gt;   negative_in_positive     : 1 cases</span></span>
-<span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a><span class="co">#&gt;   suspicious_dates         : 1 cases</span></span>
-<span id="cb21-16"><a href="#cb21-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb21-17"><a href="#cb21-17" tabindex="-1"></a><span class="co">#&gt; Recommendations:</span></span>
-<span id="cb21-18"><a href="#cb21-18" tabindex="-1"></a><span class="co">#&gt;   - Review outliers in these numeric variables: value</span></span>
-<span id="cb21-19"><a href="#cb21-19" tabindex="-1"></a><span class="co">#&gt;   - Variables with &lt; 50 % missing values: test_date, value, unit - consider imputation</span></span>
-<span id="cb21-20"><a href="#cb21-20" tabindex="-1"></a><span class="co">#&gt;   - Numeric variables with mostly positive values but containing negatives: value</span></span>
-<span id="cb21-21"><a href="#cb21-21" tabindex="-1"></a><span class="co">#&gt;   - Review suspicious dates (year &lt; 1910 or &gt; current year) in: test_date</span></span>
-<span id="cb21-22"><a href="#cb21-22" tabindex="-1"></a></span>
-<span id="cb21-23"><a href="#cb21-23" tabindex="-1"></a><span class="co"># Step 2: Format Cleaning - Extract numeric values and convert dates</span></span>
-<span id="cb21-24"><a href="#cb21-24" tabindex="-1"></a>clean <span class="ot">&lt;-</span> lab_data</span>
-<span id="cb21-25"><a href="#cb21-25" tabindex="-1"></a>clean<span class="sc">$</span>value <span class="ot">&lt;-</span> <span class="fu">extract_num</span>(lab_data<span class="sc">$</span>value)</span>
-<span id="cb21-26"><a href="#cb21-26" tabindex="-1"></a>clean<span class="sc">$</span>test_date <span class="ot">&lt;-</span> <span class="fu">to_date</span>(lab_data<span class="sc">$</span>test_date)</span>
-<span id="cb21-27"><a href="#cb21-27" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
-<span id="cb21-28"><a href="#cb21-28" tabindex="-1"></a><span class="co">#&gt; ! Input must be numeric or character vector, got: Date</span></span>
-<span id="cb21-29"><a href="#cb21-29" tabindex="-1"></a></span>
-<span id="cb21-30"><a href="#cb21-30" tabindex="-1"></a><span class="co"># Step 3: Unit Standardization</span></span>
-<span id="cb21-31"><a href="#cb21-31" tabindex="-1"></a>change_rules <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb21-32"><a href="#cb21-32" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">subject =</span> <span class="st">&quot;Glucose&quot;</span>, <span class="at">target_unit =</span> <span class="st">&quot;mg/dL&quot;</span>, <span class="at">units2change =</span> <span class="st">&quot;mmol/L&quot;</span>, <span class="at">coeffs =</span> <span class="dv">18</span>),</span>
-<span id="cb21-33"><a href="#cb21-33" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">subject =</span> <span class="st">&quot;Creatinine&quot;</span>, <span class="at">target_unit =</span> <span class="st">&quot;mg/dL&quot;</span>, <span class="at">units2change =</span> <span class="st">&quot;umol/L&quot;</span>, <span class="at">coeffs =</span> <span class="dv">1</span> <span class="sc">/</span> <span class="fl">88.4</span>),</span>
-<span id="cb21-34"><a href="#cb21-34" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">subject =</span> <span class="st">&quot;Cholesterol&quot;</span>, <span class="at">target_unit =</span> <span class="st">&quot;mg/dL&quot;</span>, <span class="at">units2change =</span> <span class="st">&quot;mmol/L&quot;</span>, <span class="at">coeffs =</span> <span class="fl">38.67</span>)</span>
-<span id="cb21-35"><a href="#cb21-35" tabindex="-1"></a>)</span>
-<span id="cb21-36"><a href="#cb21-36" tabindex="-1"></a></span>
-<span id="cb21-37"><a href="#cb21-37" tabindex="-1"></a>clean <span class="ot">&lt;-</span> <span class="fu">unit_standardize</span>(</span>
-<span id="cb21-38"><a href="#cb21-38" tabindex="-1"></a>  clean,</span>
-<span id="cb21-39"><a href="#cb21-39" tabindex="-1"></a>  <span class="at">subject_col =</span> <span class="st">&quot;test&quot;</span>, <span class="at">value_col =</span> <span class="st">&quot;value&quot;</span>,</span>
-<span id="cb21-40"><a href="#cb21-40" tabindex="-1"></a>  <span class="at">unit_col =</span> <span class="st">&quot;unit&quot;</span>, <span class="at">change_rules =</span> change_rules</span>
-<span id="cb21-41"><a href="#cb21-41" tabindex="-1"></a>)</span>
-<span id="cb21-42"><a href="#cb21-42" tabindex="-1"></a></span>
-<span id="cb21-43"><a href="#cb21-43" tabindex="-1"></a><span class="co"># Step 4: Outlier Detection and Handling</span></span>
-<span id="cb21-44"><a href="#cb21-44" tabindex="-1"></a><span class="cf">for</span> (test_name <span class="cf">in</span> <span class="fu">c</span>(<span class="st">&quot;Glucose&quot;</span>, <span class="st">&quot;Creatinine&quot;</span>, <span class="st">&quot;Cholesterol&quot;</span>)) {</span>
-<span id="cb21-45"><a href="#cb21-45" tabindex="-1"></a>  test_idx <span class="ot">&lt;-</span> clean<span class="sc">$</span>test <span class="sc">==</span> test_name</span>
-<span id="cb21-46"><a href="#cb21-46" tabindex="-1"></a>  test_values <span class="ot">&lt;-</span> clean<span class="sc">$</span>value[test_idx]</span>
-<span id="cb21-47"><a href="#cb21-47" tabindex="-1"></a>  outlier_res <span class="ot">&lt;-</span> <span class="fu">detect_outliers</span>(test_values, <span class="at">method =</span> <span class="st">&quot;iqr&quot;</span>)</span>
-<span id="cb21-48"><a href="#cb21-48" tabindex="-1"></a>  clean<span class="sc">$</span>value[test_idx][outlier_res<span class="sc">$</span>outlier_mask] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
-<span id="cb21-49"><a href="#cb21-49" tabindex="-1"></a>}</span>
-<span id="cb21-50"><a href="#cb21-50" tabindex="-1"></a></span>
-<span id="cb21-51"><a href="#cb21-51" tabindex="-1"></a><span class="co"># Step 5: Convert to wide format (longitudinal cohort data)</span></span>
-<span id="cb21-52"><a href="#cb21-52" tabindex="-1"></a>clean_wide <span class="ot">&lt;-</span> clean <span class="sc">%&gt;%</span></span>
-<span id="cb21-53"><a href="#cb21-53" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(test_date)) <span class="sc">%&gt;%</span></span>
-<span id="cb21-54"><a href="#cb21-54" tabindex="-1"></a>  <span class="fu">select</span>(patient_id, test_date, test, value) <span class="sc">%&gt;%</span></span>
-<span id="cb21-55"><a href="#cb21-55" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">pivot_wider</span>(<span class="at">names_from =</span> test, <span class="at">values_from =</span> value) <span class="sc">%&gt;%</span></span>
-<span id="cb21-56"><a href="#cb21-56" tabindex="-1"></a>  <span class="fu">arrange</span>(patient_id, test_date)</span>
-<span id="cb21-57"><a href="#cb21-57" tabindex="-1"></a></span>
-<span id="cb21-58"><a href="#cb21-58" tabindex="-1"></a><span class="co"># Step 6: Missing value filtering</span></span>
-<span id="cb21-59"><a href="#cb21-59" tabindex="-1"></a>clean_wide <span class="ot">&lt;-</span> <span class="fu">get_valid_subset</span>(clean_wide, <span class="at">row_na_ratio =</span> <span class="fl">0.5</span>, <span class="at">col_na_ratio =</span> <span class="fl">0.3</span>)</span>
-<span id="cb21-60"><a href="#cb21-60" tabindex="-1"></a></span>
-<span id="cb21-61"><a href="#cb21-61" tabindex="-1"></a><span class="co"># Step 7: Create clinical categories</span></span>
-<span id="cb21-62"><a href="#cb21-62" tabindex="-1"></a>clean_wide<span class="sc">$</span>glucose_category <span class="ot">&lt;-</span> <span class="fu">cut_by</span>(</span>
-<span id="cb21-63"><a href="#cb21-63" tabindex="-1"></a>  clean_wide<span class="sc">$</span>Glucose,</span>
-<span id="cb21-64"><a href="#cb21-64" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">100</span>, <span class="dv">126</span>),</span>
-<span id="cb21-65"><a href="#cb21-65" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;Prediabetes&quot;</span>, <span class="st">&quot;Diabetes&quot;</span>)</span>
-<span id="cb21-66"><a href="#cb21-66" tabindex="-1"></a>)</span>
-<span id="cb21-67"><a href="#cb21-67" tabindex="-1"></a><span class="co">#&gt; Error in `cut_by()`:</span></span>
-<span id="cb21-68"><a href="#cb21-68" tabindex="-1"></a><span class="co">#&gt; ! Some of `breaks` are not in the range of `x`!</span></span>
-<span id="cb21-69"><a href="#cb21-69" tabindex="-1"></a></span>
-<span id="cb21-70"><a href="#cb21-70" tabindex="-1"></a><span class="co"># Step 8: Final check</span></span>
-<span id="cb21-71"><a href="#cb21-71" tabindex="-1"></a>final_overview <span class="ot">&lt;-</span> <span class="fu">data_overview</span>(clean_wide)</span>
-<span id="cb21-72"><a href="#cb21-72" tabindex="-1"></a><span class="co">#&gt; === Data Overview Summary ===</span></span>
-<span id="cb21-73"><a href="#cb21-73" tabindex="-1"></a><span class="co">#&gt; Dataset: 232 rows, 2 columns</span></span>
-<span id="cb21-74"><a href="#cb21-74" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb21-75"><a href="#cb21-75" tabindex="-1"></a><span class="co">#&gt; Variable Types:</span></span>
-<span id="cb21-76"><a href="#cb21-76" tabindex="-1"></a><span class="co">#&gt;   character : 1 variables</span></span>
-<span id="cb21-77"><a href="#cb21-77" tabindex="-1"></a><span class="co">#&gt;   date      : 1 variables</span></span>
-<span id="cb21-78"><a href="#cb21-78" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb21-79"><a href="#cb21-79" tabindex="-1"></a><span class="co">#&gt; Found 1 potential quality issues:</span></span>
-<span id="cb21-80"><a href="#cb21-80" tabindex="-1"></a><span class="co">#&gt;   suspicious_dates         : 1 cases</span></span>
-<span id="cb21-81"><a href="#cb21-81" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb21-82"><a href="#cb21-82" tabindex="-1"></a><span class="co">#&gt; Recommendations:</span></span>
-<span id="cb21-83"><a href="#cb21-83" tabindex="-1"></a><span class="co">#&gt;   - Review suspicious dates (year &lt; 1910 or &gt; current year) in: test_date</span></span>
-<span id="cb21-84"><a href="#cb21-84" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(final_overview<span class="sc">$</span>summary_stats, <span class="at">caption =</span> <span class="st">&quot;Final Data Quality Overview&quot;</span>)</span></code></pre></div>
+<span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a><span class="co">#&gt; Recommendations:</span></span>
+<span id="cb21-16"><a href="#cb21-16" tabindex="-1"></a><span class="co">#&gt;   - Review outliers in these numeric variables: value</span></span>
+<span id="cb21-17"><a href="#cb21-17" tabindex="-1"></a><span class="co">#&gt;   - Variables with &lt; 50 % missing values: test_date, value, unit - consider imputation</span></span>
+<span id="cb21-18"><a href="#cb21-18" tabindex="-1"></a></span>
+<span id="cb21-19"><a href="#cb21-19" tabindex="-1"></a><span class="co"># Step 2: Format Cleaning - Extract numeric values and convert dates</span></span>
+<span id="cb21-20"><a href="#cb21-20" tabindex="-1"></a>clean <span class="ot">&lt;-</span> lab_data</span>
+<span id="cb21-21"><a href="#cb21-21" tabindex="-1"></a>clean<span class="sc">$</span>value <span class="ot">&lt;-</span> <span class="fu">extract_num</span>(lab_data<span class="sc">$</span>value)</span>
+<span id="cb21-22"><a href="#cb21-22" tabindex="-1"></a><span class="co"># `lab_data` has already been cleaned above, so coerce to character before re-parsing</span></span>
+<span id="cb21-23"><a href="#cb21-23" tabindex="-1"></a>clean<span class="sc">$</span>test_date <span class="ot">&lt;-</span> <span class="fu">to_date</span>(<span class="fu">as.character</span>(lab_data<span class="sc">$</span>test_date))</span>
+<span id="cb21-24"><a href="#cb21-24" tabindex="-1"></a></span>
+<span id="cb21-25"><a href="#cb21-25" tabindex="-1"></a><span class="co"># Step 3: Unit Standardization</span></span>
+<span id="cb21-26"><a href="#cb21-26" tabindex="-1"></a>change_rules <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb21-27"><a href="#cb21-27" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">subject =</span> <span class="st">&quot;Glucose&quot;</span>, <span class="at">target_unit =</span> <span class="st">&quot;mg/dL&quot;</span>, <span class="at">units2change =</span> <span class="st">&quot;mmol/L&quot;</span>, <span class="at">coeffs =</span> <span class="dv">18</span>),</span>
+<span id="cb21-28"><a href="#cb21-28" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">subject =</span> <span class="st">&quot;Creatinine&quot;</span>, <span class="at">target_unit =</span> <span class="st">&quot;mg/dL&quot;</span>, <span class="at">units2change =</span> <span class="st">&quot;umol/L&quot;</span>, <span class="at">coeffs =</span> <span class="dv">1</span> <span class="sc">/</span> <span class="fl">88.4</span>),</span>
+<span id="cb21-29"><a href="#cb21-29" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">subject =</span> <span class="st">&quot;Cholesterol&quot;</span>, <span class="at">target_unit =</span> <span class="st">&quot;mg/dL&quot;</span>, <span class="at">units2change =</span> <span class="st">&quot;mmol/L&quot;</span>, <span class="at">coeffs =</span> <span class="fl">38.67</span>)</span>
+<span id="cb21-30"><a href="#cb21-30" tabindex="-1"></a>)</span>
+<span id="cb21-31"><a href="#cb21-31" tabindex="-1"></a></span>
+<span id="cb21-32"><a href="#cb21-32" tabindex="-1"></a>clean <span class="ot">&lt;-</span> <span class="fu">unit_standardize</span>(</span>
+<span id="cb21-33"><a href="#cb21-33" tabindex="-1"></a>  clean,</span>
+<span id="cb21-34"><a href="#cb21-34" tabindex="-1"></a>  <span class="at">subject_col =</span> <span class="st">&quot;test&quot;</span>, <span class="at">value_col =</span> <span class="st">&quot;value&quot;</span>,</span>
+<span id="cb21-35"><a href="#cb21-35" tabindex="-1"></a>  <span class="at">unit_col =</span> <span class="st">&quot;unit&quot;</span>, <span class="at">change_rules =</span> change_rules</span>
+<span id="cb21-36"><a href="#cb21-36" tabindex="-1"></a>)</span>
+<span id="cb21-37"><a href="#cb21-37" tabindex="-1"></a></span>
+<span id="cb21-38"><a href="#cb21-38" tabindex="-1"></a><span class="co"># Step 4: Outlier Detection and Handling</span></span>
+<span id="cb21-39"><a href="#cb21-39" tabindex="-1"></a><span class="cf">for</span> (test_name <span class="cf">in</span> <span class="fu">c</span>(<span class="st">&quot;Glucose&quot;</span>, <span class="st">&quot;Creatinine&quot;</span>, <span class="st">&quot;Cholesterol&quot;</span>)) {</span>
+<span id="cb21-40"><a href="#cb21-40" tabindex="-1"></a>  test_idx <span class="ot">&lt;-</span> clean<span class="sc">$</span>test <span class="sc">==</span> test_name</span>
+<span id="cb21-41"><a href="#cb21-41" tabindex="-1"></a>  test_values <span class="ot">&lt;-</span> clean<span class="sc">$</span>value[test_idx]</span>
+<span id="cb21-42"><a href="#cb21-42" tabindex="-1"></a>  outlier_res <span class="ot">&lt;-</span> <span class="fu">detect_outliers</span>(test_values, <span class="at">method =</span> <span class="st">&quot;iqr&quot;</span>)</span>
+<span id="cb21-43"><a href="#cb21-43" tabindex="-1"></a>  clean<span class="sc">$</span>value[test_idx][outlier_res<span class="sc">$</span>outlier_mask] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb21-44"><a href="#cb21-44" tabindex="-1"></a>}</span>
+<span id="cb21-45"><a href="#cb21-45" tabindex="-1"></a></span>
+<span id="cb21-46"><a href="#cb21-46" tabindex="-1"></a><span class="co"># Step 5: Convert to wide format (longitudinal cohort data)</span></span>
+<span id="cb21-47"><a href="#cb21-47" tabindex="-1"></a>clean_wide <span class="ot">&lt;-</span> clean <span class="sc">%&gt;%</span></span>
+<span id="cb21-48"><a href="#cb21-48" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(test_date)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-49"><a href="#cb21-49" tabindex="-1"></a>  <span class="fu">select</span>(patient_id, test_date, test, value) <span class="sc">%&gt;%</span></span>
+<span id="cb21-50"><a href="#cb21-50" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">pivot_wider</span>(<span class="at">names_from =</span> test, <span class="at">values_from =</span> value) <span class="sc">%&gt;%</span></span>
+<span id="cb21-51"><a href="#cb21-51" tabindex="-1"></a>  <span class="fu">arrange</span>(patient_id, test_date)</span>
+<span id="cb21-52"><a href="#cb21-52" tabindex="-1"></a></span>
+<span id="cb21-53"><a href="#cb21-53" tabindex="-1"></a><span class="co"># Step 6: Missing value filtering (only the test-result columns)</span></span>
+<span id="cb21-54"><a href="#cb21-54" tabindex="-1"></a>valid_idx <span class="ot">&lt;-</span> <span class="fu">get_valid_subset</span>(</span>
+<span id="cb21-55"><a href="#cb21-55" tabindex="-1"></a>  clean_wide[test_cols],</span>
+<span id="cb21-56"><a href="#cb21-56" tabindex="-1"></a>  <span class="at">row_na_ratio =</span> <span class="fl">0.5</span>, <span class="at">col_na_ratio =</span> <span class="fl">0.3</span>,</span>
+<span id="cb21-57"><a href="#cb21-57" tabindex="-1"></a>  <span class="at">return_index =</span> <span class="cn">TRUE</span></span>
+<span id="cb21-58"><a href="#cb21-58" tabindex="-1"></a>)</span>
+<span id="cb21-59"><a href="#cb21-59" tabindex="-1"></a>clean_wide <span class="ot">&lt;-</span> clean_wide[</span>
+<span id="cb21-60"><a href="#cb21-60" tabindex="-1"></a>  valid_idx<span class="sc">$</span>rows,</span>
+<span id="cb21-61"><a href="#cb21-61" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;patient_id&quot;</span>, <span class="st">&quot;test_date&quot;</span>, test_cols[valid_idx<span class="sc">$</span>cols])</span>
+<span id="cb21-62"><a href="#cb21-62" tabindex="-1"></a>]</span>
+<span id="cb21-63"><a href="#cb21-63" tabindex="-1"></a></span>
+<span id="cb21-64"><a href="#cb21-64" tabindex="-1"></a><span class="co"># Step 7: Create clinical categories</span></span>
+<span id="cb21-65"><a href="#cb21-65" tabindex="-1"></a>clean_wide<span class="sc">$</span>glucose_category <span class="ot">&lt;-</span> <span class="fu">cut_by</span>(</span>
+<span id="cb21-66"><a href="#cb21-66" tabindex="-1"></a>  clean_wide<span class="sc">$</span>Glucose,</span>
+<span id="cb21-67"><a href="#cb21-67" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">100</span>, <span class="dv">126</span>),</span>
+<span id="cb21-68"><a href="#cb21-68" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;Prediabetes&quot;</span>, <span class="st">&quot;Diabetes&quot;</span>)</span>
+<span id="cb21-69"><a href="#cb21-69" tabindex="-1"></a>)</span>
+<span id="cb21-70"><a href="#cb21-70" tabindex="-1"></a></span>
+<span id="cb21-71"><a href="#cb21-71" tabindex="-1"></a><span class="co"># Step 8: Final check</span></span>
+<span id="cb21-72"><a href="#cb21-72" tabindex="-1"></a>final_overview <span class="ot">&lt;-</span> <span class="fu">data_overview</span>(clean_wide)</span>
+<span id="cb21-73"><a href="#cb21-73" tabindex="-1"></a><span class="co">#&gt; === Data Overview Summary ===</span></span>
+<span id="cb21-74"><a href="#cb21-74" tabindex="-1"></a><span class="co">#&gt; Dataset: 112 rows, 6 columns</span></span>
+<span id="cb21-75"><a href="#cb21-75" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb21-76"><a href="#cb21-76" tabindex="-1"></a><span class="co">#&gt; Variable Types:</span></span>
+<span id="cb21-77"><a href="#cb21-77" tabindex="-1"></a><span class="co">#&gt;   numeric   : 3 variables</span></span>
+<span id="cb21-78"><a href="#cb21-78" tabindex="-1"></a><span class="co">#&gt;   character : 2 variables</span></span>
+<span id="cb21-79"><a href="#cb21-79" tabindex="-1"></a><span class="co">#&gt;   date      : 1 variables</span></span>
+<span id="cb21-80"><a href="#cb21-80" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb21-81"><a href="#cb21-81" tabindex="-1"></a><span class="co">#&gt; Found 7 potential quality issues:</span></span>
+<span id="cb21-82"><a href="#cb21-82" tabindex="-1"></a><span class="co">#&gt;   outliers                 : 3 cases</span></span>
+<span id="cb21-83"><a href="#cb21-83" tabindex="-1"></a><span class="co">#&gt;   missing_values           : 4 cases</span></span>
+<span id="cb21-84"><a href="#cb21-84" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb21-85"><a href="#cb21-85" tabindex="-1"></a><span class="co">#&gt; Recommendations:</span></span>
+<span id="cb21-86"><a href="#cb21-86" tabindex="-1"></a><span class="co">#&gt;   - Review outliers in these numeric variables: Glucose, Creatinine, Cholesterol</span></span>
+<span id="cb21-87"><a href="#cb21-87" tabindex="-1"></a><span class="co">#&gt;   - Variables with &lt; 50 % missing values: Creatinine, Glucose, Cholesterol, glucose_category - consider imputation</span></span>
+<span id="cb21-88"><a href="#cb21-88" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(final_overview<span class="sc">$</span>summary_stats, <span class="at">caption =</span> <span class="st">&quot;Final Data Quality Overview&quot;</span>)</span></code></pre></div>
 <table class="kable_wrapper">
 <caption>
 Final Data Quality Overview
@@ -1944,19 +2104,80 @@ Final Data Quality Overview
 <td>
 <table style="width:100%;">
 <colgroup>
-<col width="13%" />
-<col width="13%" />
-<col width="4%" />
-<col width="9%" />
-<col width="14%" />
-<col width="8%" />
-<col width="12%" />
+<col width="17%" />
+<col width="5%" />
 <col width="11%" />
-<col width="9%" />
+<col width="17%" />
+<col width="10%" />
+<col width="10%" />
+<col width="10%" />
+<col width="10%" />
+<col width="8%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th align="left"></th>
+<th align="left">variable</th>
+<th align="right">n</th>
+<th align="right">missing</th>
+<th align="right">missing_pct</th>
+<th align="right">mean</th>
+<th align="right">median</th>
+<th align="right">min</th>
+<th align="right">max</th>
+<th align="right">sd</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Glucose</td>
+<td align="right">101</td>
+<td align="right">11</td>
+<td align="right">9.82</td>
+<td align="right">115.51</td>
+<td align="right">106.52</td>
+<td align="right">4.59</td>
+<td align="right">236.63</td>
+<td align="right">58.24</td>
+</tr>
+<tr class="even">
+<td align="left">Creatinine</td>
+<td align="right">98</td>
+<td align="right">14</td>
+<td align="right">12.50</td>
+<td align="right">1.76</td>
+<td align="right">1.01</td>
+<td align="right">0.01</td>
+<td align="right">5.34</td>
+<td align="right">1.35</td>
+</tr>
+<tr class="odd">
+<td align="left">Cholesterol</td>
+<td align="right">101</td>
+<td align="right">11</td>
+<td align="right">9.82</td>
+<td align="right">212.12</td>
+<td align="right">211.14</td>
+<td align="right">122.58</td>
+<td align="right">335.70</td>
+<td align="right">48.55</td>
+</tr>
+</tbody>
+</table>
+</td>
+<td>
+<table>
+<colgroup>
+<col width="22%" />
+<col width="5%" />
+<col width="10%" />
+<col width="16%" />
+<col width="9%" />
+<col width="13%" />
+<col width="12%" />
+<col width="10%" />
+</colgroup>
+<thead>
+<tr class="header">
 <th align="left">variable</th>
 <th align="right">n</th>
 <th align="right">missing</th>
@@ -1970,14 +2191,23 @@ Final Data Quality Overview
 <tbody>
 <tr class="odd">
 <td align="left">patient_id</td>
-<td align="left">patient_id</td>
-<td align="right">232</td>
+<td align="right">112</td>
 <td align="right">0</td>
-<td align="right">0</td>
-<td align="right">99</td>
-<td align="left">P003</td>
+<td align="right">0.00</td>
+<td align="right">56</td>
+<td align="left">P005</td>
 <td align="right">3</td>
-<td align="right">1.29</td>
+<td align="right">2.68</td>
+</tr>
+<tr class="even">
+<td align="left">glucose_category</td>
+<td align="right">101</td>
+<td align="right">11</td>
+<td align="right">9.82</td>
+<td align="right">3</td>
+<td align="left">Normal</td>
+<td align="right">40</td>
+<td align="right">39.60</td>
 </tr>
 </tbody>
 </table>
@@ -1992,12 +2222,12 @@ Final Data Quality Overview
 <span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a>  <span class="st">&quot;| Removed:&quot;</span>, <span class="fu">nrow</span>(lab_data) <span class="sc">-</span> <span class="fu">nrow</span>(clean_wide), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span></span>
 <span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a>)</span>
 <span id="cb22-7"><a href="#cb22-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb22-8"><a href="#cb22-8" tabindex="-1"></a><span class="co">#&gt; Original records: 300 | Final records: 232 | Removed: 68</span></span>
+<span id="cb22-8"><a href="#cb22-8" tabindex="-1"></a><span class="co">#&gt; Original records: 393 | Final records: 112 | Removed: 281</span></span>
 <span id="cb22-9"><a href="#cb22-9" tabindex="-1"></a><span class="fu">cat</span>(</span>
 <span id="cb22-10"><a href="#cb22-10" tabindex="-1"></a>  <span class="st">&quot;Unique patients:&quot;</span>, <span class="fu">length</span>(<span class="fu">unique</span>(lab_data<span class="sc">$</span>patient_id)),</span>
 <span id="cb22-11"><a href="#cb22-11" tabindex="-1"></a>  <span class="st">&quot;-&gt;&quot;</span>, <span class="fu">length</span>(<span class="fu">unique</span>(clean_wide<span class="sc">$</span>patient_id)), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span></span>
 <span id="cb22-12"><a href="#cb22-12" tabindex="-1"></a>)</span>
-<span id="cb22-13"><a href="#cb22-13" tabindex="-1"></a><span class="co">#&gt; Unique patients: 100 -&gt; 99</span></span></code></pre></div>
+<span id="cb22-13"><a href="#cb22-13" tabindex="-1"></a><span class="co">#&gt; Unique patients: 60 -&gt; 56</span></span></code></pre></div>
 </div>
 <div id="summary" class="section level2">
 <h2>Summary</h2>

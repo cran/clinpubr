@@ -199,7 +199,7 @@ regression_basic_results <- function(
         fit <- survminer::surv_fit(formula = formula, data = dat)
         log_rank_p <- tryCatch(
           {
-            log_rank_p <- survdiff(formula = formula, data = dat)$pvalue
+            log_rank_p <- survival::survdiff(formula = formula, data = dat)$pvalue
             format_pval(log_rank_p,
               text_ahead = "Log-rank\np",
               nsmall = p_nsmall, eps = pval_eps
@@ -474,7 +474,7 @@ regression_forest <- function(data, model_vars, y, time = NULL, time2 = NULL, cl
     tmp_res <- NULL
     for (var_id in intersect(tmp_var_ids, show_var_ids)) {
       if (!is.factor(data[[new_vars[var_id]]]) || length(levels(data[[new_vars[var_id]]])) == 2) {
-        tmp <- fit_res[fit_res$term == new_vars[var_id], ]
+        tmp <- fit_res[startsWith(fit_res$term, new_vars[var_id]), ]
         tmp <- data.frame(
           Model = model_name,
           Variable = vars[var_id],

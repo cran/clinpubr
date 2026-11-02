@@ -1,6 +1,6 @@
 Package: clinpubr
 Title: Clinical Publication
-Version: 1.4.2
+Version: 1.4.3
 Authors@R: 
     c(person("Yue", "Niu", email = "niuyuesam@163.com", role = c("aut", "cre", "cph"),
              comment = c(ORCID = "0000-0001-6843-3548")),
@@ -36,9 +36,9 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 NeedsCompilation: yes
-Packaged: 2026-09-18 07:44:09 UTC; niuyu
+Packaged: 2026-11-02 11:51:05 UTC; niuyu
 Author: Yue Niu [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0001-6843-3548>),
   Keyun Wang [aut]
 Repository: CRAN
-Date/Publication: 2026-09-18 08:30:02 UTC
+Date/Publication: 2026-11-02 12:20:02 UTC
